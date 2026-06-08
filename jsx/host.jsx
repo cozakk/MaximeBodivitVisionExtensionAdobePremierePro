@@ -295,6 +295,58 @@ function _applyZoom(trackItem, warnings) {
     return false;
 }
 
+/**
+ * Best-effort: add a cross-dissolve at the head of every clip on the
+ * destination video track, using the QE DOM. The QE addTransition API is
+ * undocumented and varies between Premiere versions, so we try a couple of
+ * known names/signatures and fail softly (warnings only). Handles preserved
+ * by the B-Roll trim make the dissolve possible.
+ *
+ * Returns the number of transitions actually added.
+ */
+function _addTransitions(seq, dstIdx, warnings) {
+    var added = 0;
+    try {
+        app.enableQE();
+        var qeSeq = (typeof qe !== 'undefined' && qe.project) ? qe.project.getActiveSequence() : null;
+        if (!qeSeq) { warnings.push('Transitions: QE DOM indisponible.'); return 0; }
+
+        var qeTrack = qeSeq.getVideoTrackAt(dstIdx);
+        if (!qeTrack) { warnings.push('Transitions: piste QE V' + (dstIdx + 1) + ' introuvable.'); return 0; }
+
+        // Locate a cross-dissolve by its common English/French names.
+        var trans = null;
+        var names = ['Cross Dissolve', 'Fondu enchaine', 'Fondu enchaîné', 'Dissolve'];
+        for (var n = 0; n < names.length && !trans; n++) {
+            try { trans = qe.project.getVideoTransitionByName(names[n]); } catch (e) {}
+        }
+        if (!trans) { warnings.push('Transitions: effet "Fondu enchaine" introuvable.'); return 0; }
+
+        var numItems = qeTrack.numItems;
+        for (var i = 0; i < numItems; i++) {
+            var qeClip = null;
+            try { qeClip = qeTrack.getItemAt(i); } catch (e) { continue; }
+            if (!qeClip) continue;
+            // Skip empty gaps (QE exposes them as items named "" / "Empty").
+            var nm = '';
+            try { nm = qeClip.name || ''; } catch (e) {}
+            if (nm === '' || nm === 'Empty') continue;
+
+            try {
+                qeClip.addTransition(trans, true);   // addToStart = true (head)
+                added++;
+            } catch (e) {
+                try { qeClip.addTransition(trans, true, '00;00;01;00'); added++; }
+                catch (e2) { /* per-clip failure, keep going */ }
+            }
+        }
+        if (added === 0) warnings.push('Transitions: aucune ajoutee (API addTransition incompatible avec cette version).');
+    } catch (e) {
+        warnings.push('Transitions: exception ' + e.toString());
+    }
+    return added;
+}
+
 // ---------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------
@@ -513,6 +565,12 @@ function generateBRoll(jsonStr) {
             created++;
         }
 
+        // ----- Optional cross-dissolve transitions on the new extracts -----
+        var transitionsAdded = 0;
+        if (p.transition && created > 0) {
+            transitionsAdded = _addTransitions(seq, dstIdx, warnings);
+        }
+
         // ----- Close undo group -----
         if (!p.dryRun) {
             try { app.project.closeUndoGroup && app.project.closeUndoGroup(); } catch (e) {}
@@ -533,6 +591,7 @@ function generateBRoll(jsonStr) {
             created: created,
             skipped: skipped,
             dstTrackIdx: dstIdx,
+            transitions: transitionsAdded,
             warnings: warnings
         });
 

@@ -33,6 +33,7 @@
   const optRandom   = document.getElementById('opt-random');
   const optZoom     = document.getElementById('opt-zoom');
   const optMarker   = document.getElementById('opt-marker');
+  const optTransition = document.getElementById('opt-transition');
   const generateBtn = document.getElementById('generate-btn');
   const previewBtn  = document.getElementById('preview-btn');
   const presetBtns  = document.querySelectorAll('.preset');
@@ -83,7 +84,7 @@
   // that add new controls simply append their id here.
   const PERSIST_IDS = [
     'duration', 'position', 'src-track', 'dst-track',
-    'opt-selected', 'opt-random', 'opt-zoom', 'opt-marker'
+    'opt-selected', 'opt-random', 'opt-zoom', 'opt-marker', 'opt-transition'
   ];
   const LS_SETTINGS = 'visionext.settings';
   const LS_PREFS    = 'visionext.prefs';
@@ -232,7 +233,8 @@
       random:      optRandom.checked,
       zoom:        optZoom.checked,
       marker:      optMarker.checked,
-      onlySelected: optSelected.checked
+      onlySelected: optSelected.checked,
+      transition:  optTransition.checked
     };
     if (!params.duration || params.duration <= 0) {
       log('err', 'Duree invalide.');
@@ -260,7 +262,8 @@
         (params.onlySelected ? ', selection' : '') +
         (params.random ? ', random' : '') +
         (params.zoom ? ', zoom' : '') +
-        (params.marker ? ', marqueurs' : ''));
+        (params.marker ? ', marqueurs' : '') +
+        (params.transition ? ', transitions' : ''));
 
     const payload = JSON.stringify(params);
     const raw = await evalScript("generateBRoll('" + jsString(payload) + "')");
@@ -279,6 +282,7 @@
     } else {
       log('ok', 'Termine. ' + result.created + ' extrait(s) cree(s) sur V' + (result.dstTrackIdx + 1) +
           '. Ignores: ' + (result.skipped || 0) + '.');
+      if (result.transitions) log('info', result.transitions + ' transition(s) ajoutee(s).');
       if (result.warnings && result.warnings.length) {
         for (let i = 0; i < result.warnings.length; i++) {
           log('warn', result.warnings[i]);
