@@ -4,6 +4,7 @@ Suivi des fonctionnalités de l'extension Premiere Pro.
 Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 
 > Mettre à jour ce fichier à chaque ajout ou modification de feature.
+> Historique détaillé des corrections : voir [changelog.md](changelog.md).
 
 ---
 
@@ -35,6 +36,7 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [x] Sélection de la piste source (V1…Vn)
 - [x] Sélection de la piste destination (+ option « nouvelle piste »)
 - [x] Génération des extraits sur la piste destination (`generateBRoll`)
+- [x] Découpe à la durée demandée (corrigé en v1.2.0 — était à pleine longueur)
 - [x] Conservation des poignées (handles) des deux côtés pour réajuster au montage
 - [x] Clamp de la durée si le clip est plus court que demandé (pas d'erreur)
 - [x] Option : position aléatoire dans chaque clip
@@ -48,7 +50,7 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 ## Onglet Compactage (suppression des trous)
 
 - [x] Sélection de la piste à compacter (toutes pistes V + A)
-- [x] Suppression de tous les trous entre clips (`removeGaps`)
+- [x] Suppression de **tous** les trous entre clips (corrigé en v1.2.0 — seul le 1er se fermait)
 - [x] Décalage des clips vers la gauche pour qu'ils se touchent
 - [x] Déplacement des items liés (audio/vidéo synchronisés)
 - [x] Compte-rendu : nb de clips déplacés + durée totale supprimée
