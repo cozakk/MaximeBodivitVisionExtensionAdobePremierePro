@@ -9,7 +9,7 @@ opérations de montage répétitives, directement depuis un panneau intégré :
 - **Compactage** — supprime tous les trous entre les clips d'une piste en les
   décalant vers la gauche pour qu'ils se touchent.
 
-> Version actuelle : **v1.2.0** — voir [.claude/changelog.md](.claude/changelog.md).
+> Version actuelle : **v1.3.0** — voir [.claude/changelog.md](.claude/changelog.md).
 
 ---
 
