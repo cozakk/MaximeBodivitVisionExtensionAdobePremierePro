@@ -325,12 +325,27 @@ button.secondary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ---------- Footer ---------- */
 footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 6px 14px;
   background: #1a1a1a;
   border-top: 1px solid #0f0f0f;
   font-size: 10px;
   color: #666;
-  text-align: right;
+}
+
+.lang-select {
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  color: #aaa;
+  font-size: 10px;
+  padding: 2px 18px 2px 6px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  background-position: right 4px center;
 }
 
 /* ---------- Scrollbars ---------- */

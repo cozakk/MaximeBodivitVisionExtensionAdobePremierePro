@@ -24,6 +24,7 @@
   const logEl       = document.getElementById('log');
   const clearLogBtn = document.getElementById('clear-log');
   const diagBtn     = document.getElementById('diag-btn');
+  const langSelect  = document.getElementById('lang-select');
   const tabBtns     = document.querySelectorAll('.tab');
   const tabPanels   = document.querySelectorAll('.tab-content');
 
@@ -153,6 +154,98 @@
   }
 
   // ------------------------------------------------------------------
+  // Internationalisation (FR / EN)
+  // ------------------------------------------------------------------
+  const I18N = {
+    fr: {
+      'tab.gaps': 'Compactage',
+      'seq.none': 'Aucune sequence detectee',
+      'broll.duration': 'Duree du segment (secondes)',
+      'broll.position': 'Position dans le clip',
+      'pos.start': 'Debut du clip',
+      'pos.middle': 'Milieu du clip',
+      'pos.end': 'Fin du clip',
+      'broll.src': 'Piste source',
+      'broll.dst': 'Piste destination',
+      'broll.dstHint': "La piste sera creee automatiquement si elle n'existe pas.",
+      'options': 'Options',
+      'opt.selected': 'Seulement les clips selectionnes (sinon toute la piste)',
+      'opt.random': 'Position aleatoire dans chaque clip',
+      'opt.zoom': 'Ajouter un zoom leger (scale 110%)',
+      'opt.marker': 'Ajouter un marqueur sur chaque extrait',
+      'opt.transition': 'Ajouter des transitions (fondu enchaine, experimental)',
+      'btn.preview': 'Previsualiser',
+      'btn.generate': 'Generer les extraits',
+      'gaps.tracks': 'Pistes a compacter',
+      'gaps.all': 'Tout',
+      'gaps.none': 'Aucune',
+      'gaps.hint': "Coche une ou plusieurs pistes. Tous les trous entre clips de chaque piste cochee sont supprimes (clips decales vers la gauche). L'ensemble compte comme une seule annulation.",
+      'btn.gaps': 'Supprimer les trous',
+      'log.title': 'Journal',
+      'log.diag': 'Diagnostic',
+      'log.clear': 'Effacer',
+      'tip.undo': 'Annuler (Ctrl+Z)',
+      'tip.redo': 'Retablir (Ctrl+Maj+Z)',
+      'tip.refresh': 'Recharger les pistes de la sequence active',
+      'busy.generating': 'Generation en cours...',
+      'busy.preview': 'Calcul...',
+      'busy.compacting': 'Compactage en cours...'
+    },
+    en: {
+      'tab.gaps': 'Compacting',
+      'seq.none': 'No sequence detected',
+      'broll.duration': 'Segment duration (seconds)',
+      'broll.position': 'Position within the clip',
+      'pos.start': 'Clip start',
+      'pos.middle': 'Clip middle',
+      'pos.end': 'Clip end',
+      'broll.src': 'Source track',
+      'broll.dst': 'Destination track',
+      'broll.dstHint': "The track is created automatically if it doesn't exist.",
+      'options': 'Options',
+      'opt.selected': 'Selected clips only (otherwise the whole track)',
+      'opt.random': 'Random position within each clip',
+      'opt.zoom': 'Add a slight zoom (scale 110%)',
+      'opt.marker': 'Add a marker on each extract',
+      'opt.transition': 'Add transitions (cross dissolve, experimental)',
+      'btn.preview': 'Preview',
+      'btn.generate': 'Generate extracts',
+      'gaps.tracks': 'Tracks to compact',
+      'gaps.all': 'All',
+      'gaps.none': 'None',
+      'gaps.hint': 'Tick one or more tracks. All gaps between clips of each ticked track are removed (clips shifted left). The whole run counts as a single undo.',
+      'btn.gaps': 'Remove gaps',
+      'log.title': 'Log',
+      'log.diag': 'Diagnostic',
+      'log.clear': 'Clear',
+      'tip.undo': 'Undo (Ctrl+Z)',
+      'tip.redo': 'Redo (Ctrl+Shift+Z)',
+      'tip.refresh': 'Reload the active sequence tracks',
+      'busy.generating': 'Generating...',
+      'busy.preview': 'Computing...',
+      'busy.compacting': 'Compacting...'
+    }
+  };
+  let LANG = 'fr';
+  function t(key) {
+    return (I18N[LANG] && I18N[LANG][key]) || I18N.fr[key] || key;
+  }
+  function applyI18n() {
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      el.textContent = t(el.getAttribute('data-i18n'));
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+      el.title = t(el.getAttribute('data-i18n-title'));
+    });
+    document.documentElement.lang = LANG;
+  }
+  function setLang(lang) {
+    LANG = (lang === 'en') ? 'en' : 'fr';
+    savePref('lang', LANG);
+    applyI18n();
+  }
+
+  // ------------------------------------------------------------------
   // Tab switching
   // ------------------------------------------------------------------
   tabBtns.forEach((btn) => {
@@ -259,7 +352,7 @@
     if (!params) return;
 
     generateBtn.disabled = true;
-    generateBtn.textContent = 'Generation en cours...';
+    generateBtn.textContent = t('busy.generating');
     log('info', 'B-Roll: duree=' + params.duration + 's, position=' + params.position +
         ', src=V' + (params.srcTrackIdx + 1) + ', dst=V' + (params.dstTrackIdx + 1) +
         (params.onlySelected ? ', selection' : '') +
@@ -276,7 +369,7 @@
     catch (e) {
       log('err', 'Reponse invalide du host: ' + raw);
       generateBtn.disabled = false;
-      generateBtn.textContent = 'Generer les extraits';
+      generateBtn.textContent = t('btn.generate');
       return;
     }
 
@@ -294,7 +387,7 @@
     }
 
     generateBtn.disabled = false;
-    generateBtn.textContent = 'Generer les extraits';
+    generateBtn.textContent = t('btn.generate');
     await refreshTracks();
   }
 
@@ -307,7 +400,7 @@
     params.dryRun = true;
 
     previewBtn.disabled = true;
-    previewBtn.textContent = 'Calcul...';
+    previewBtn.textContent = t('busy.preview');
     log('info', 'Previsualisation B-Roll (aucune modification de la timeline)...');
 
     const payload = JSON.stringify(params);
@@ -318,7 +411,7 @@
     catch (e) {
       log('err', 'Reponse invalide du host: ' + raw);
       previewBtn.disabled = false;
-      previewBtn.textContent = 'Previsualiser';
+      previewBtn.textContent = t('btn.preview');
       return;
     }
 
@@ -336,7 +429,7 @@
     }
 
     previewBtn.disabled = false;
-    previewBtn.textContent = 'Previsualiser';
+    previewBtn.textContent = t('btn.preview');
   }
 
   // ------------------------------------------------------------------
@@ -400,7 +493,7 @@
     });
 
     gapsBtn.disabled = true;
-    gapsBtn.textContent = 'Compactage en cours...';
+    gapsBtn.textContent = t('busy.compacting');
     log('info', 'Compactage de ' + tracks.length + ' piste(s): ' + keys.map(prettyTrack).join(', '));
 
     const payload = JSON.stringify({ tracks: tracks });
@@ -411,7 +504,7 @@
     catch (e) {
       log('err', 'Reponse invalide du host: ' + raw);
       gapsBtn.disabled = false;
-      gapsBtn.textContent = 'Supprimer les trous';
+      gapsBtn.textContent = t('btn.gaps');
       return;
     }
 
@@ -429,7 +522,7 @@
     }
 
     gapsBtn.disabled = false;
-    gapsBtn.textContent = 'Supprimer les trous';
+    gapsBtn.textContent = t('btn.gaps');
   }
 
   // ------------------------------------------------------------------
@@ -496,6 +589,13 @@
   // ------------------------------------------------------------------
   // Initial load
   // ------------------------------------------------------------------
+  LANG = getPref('lang', 'fr');
+  if (langSelect) {
+    langSelect.value = LANG;
+    langSelect.addEventListener('change', () => setLang(langSelect.value));
+  }
+  applyI18n();
+  seqNameEl.textContent = t('seq.none');
   restoreTab();
   restoreSettings();
   wirePersistence();

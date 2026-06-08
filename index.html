@@ -11,15 +11,15 @@
     <header>
       <h1>Maxime Bodivit Vision Ext</h1>
       <div class="header-actions">
-        <button id="undo-btn" class="icon-btn" title="Annuler (Ctrl+Z)">&#x21b6;</button>
-        <button id="redo-btn" class="icon-btn" title="Retablir (Ctrl+Maj+Z)">&#x21b7;</button>
-        <button id="refresh-btn" class="icon-btn" title="Recharger les pistes de la sequence active">&#x21bb;</button>
+        <button id="undo-btn" class="icon-btn" data-i18n-title="tip.undo" title="Annuler (Ctrl+Z)">&#x21b6;</button>
+        <button id="redo-btn" class="icon-btn" data-i18n-title="tip.redo" title="Retablir (Ctrl+Maj+Z)">&#x21b7;</button>
+        <button id="refresh-btn" class="icon-btn" data-i18n-title="tip.refresh" title="Recharger les pistes de la sequence active">&#x21bb;</button>
       </div>
     </header>
 
     <nav class="tabs">
       <button class="tab active" data-tab="broll">B-Roll</button>
-      <button class="tab" data-tab="gaps">Compactage</button>
+      <button class="tab" data-tab="gaps" data-i18n="tab.gaps">Compactage</button>
     </nav>
 
     <section class="info-bar">
@@ -34,7 +34,7 @@
       <section class="tab-content" id="tab-broll">
 
         <div class="field">
-          <label for="duration">Duree du segment (secondes)</label>
+          <label for="duration" data-i18n="broll.duration">Duree du segment (secondes)</label>
           <div class="row">
             <input type="number" id="duration" min="0.1" max="600" step="0.1" value="3" />
             <div class="presets">
@@ -47,61 +47,61 @@
         </div>
 
         <div class="field">
-          <label for="position">Position dans le clip</label>
+          <label for="position" data-i18n="broll.position">Position dans le clip</label>
           <select id="position">
-            <option value="start">Debut du clip</option>
-            <option value="middle" selected>Milieu du clip</option>
-            <option value="end">Fin du clip</option>
+            <option value="start" data-i18n="pos.start">Debut du clip</option>
+            <option value="middle" selected data-i18n="pos.middle">Milieu du clip</option>
+            <option value="end" data-i18n="pos.end">Fin du clip</option>
           </select>
         </div>
 
         <div class="field">
-          <label for="src-track">Piste source</label>
+          <label for="src-track" data-i18n="broll.src">Piste source</label>
           <select id="src-track">
             <option value="0">V1</option>
           </select>
         </div>
 
         <div class="field">
-          <label for="dst-track">Piste destination</label>
+          <label for="dst-track" data-i18n="broll.dst">Piste destination</label>
           <select id="dst-track">
             <option value="1">V2</option>
           </select>
-          <p class="hint">La piste sera creee automatiquement si elle n'existe pas.</p>
+          <p class="hint" data-i18n="broll.dstHint">La piste sera creee automatiquement si elle n'existe pas.</p>
         </div>
 
         <fieldset class="bonus">
-          <legend>Options</legend>
+          <legend data-i18n="options">Options</legend>
 
           <label class="check">
             <input type="checkbox" id="opt-selected" />
-            <span>Seulement les clips selectionnes (sinon toute la piste)</span>
+            <span data-i18n="opt.selected">Seulement les clips selectionnes (sinon toute la piste)</span>
           </label>
 
           <label class="check">
             <input type="checkbox" id="opt-random" />
-            <span>Position aleatoire dans chaque clip</span>
+            <span data-i18n="opt.random">Position aleatoire dans chaque clip</span>
           </label>
 
           <label class="check">
             <input type="checkbox" id="opt-zoom" />
-            <span>Ajouter un zoom leger (scale 110%)</span>
+            <span data-i18n="opt.zoom">Ajouter un zoom leger (scale 110%)</span>
           </label>
 
           <label class="check">
             <input type="checkbox" id="opt-marker" />
-            <span>Ajouter un marqueur sur chaque extrait</span>
+            <span data-i18n="opt.marker">Ajouter un marqueur sur chaque extrait</span>
           </label>
 
           <label class="check">
             <input type="checkbox" id="opt-transition" />
-            <span>Ajouter des transitions (fondu enchaine, experimental)</span>
+            <span data-i18n="opt.transition">Ajouter des transitions (fondu enchaine, experimental)</span>
           </label>
         </fieldset>
 
         <div class="btn-row">
-          <button id="preview-btn" class="secondary">Previsualiser</button>
-          <button id="generate-btn" class="primary">Generer les extraits</button>
+          <button id="preview-btn" class="secondary" data-i18n="btn.preview">Previsualiser</button>
+          <button id="generate-btn" class="primary" data-i18n="btn.generate">Generer les extraits</button>
         </div>
 
       </section>
@@ -112,18 +112,18 @@
       <section class="tab-content hidden" id="tab-gaps">
 
         <div class="field">
-          <label>Pistes a compacter</label>
+          <label data-i18n="gaps.tracks">Pistes a compacter</label>
           <div id="gaps-tracks" class="track-checklist">
             <!-- cases a cocher injectees par main.js -->
           </div>
           <div class="row mini-row">
-            <button type="button" id="gaps-all" class="mini">Tout</button>
-            <button type="button" id="gaps-none" class="mini">Aucune</button>
+            <button type="button" id="gaps-all" class="mini" data-i18n="gaps.all">Tout</button>
+            <button type="button" id="gaps-none" class="mini" data-i18n="gaps.none">Aucune</button>
           </div>
-          <p class="hint">Coche une ou plusieurs pistes. Tous les trous entre clips de chaque piste cochee sont supprimes (clips decales vers la gauche). L'ensemble compte comme une seule annulation.</p>
+          <p class="hint" data-i18n="gaps.hint">Coche une ou plusieurs pistes. Tous les trous entre clips de chaque piste cochee sont supprimes (clips decales vers la gauche). L'ensemble compte comme une seule annulation.</p>
         </div>
 
-        <button id="gaps-btn" class="primary">Supprimer les trous</button>
+        <button id="gaps-btn" class="primary" data-i18n="btn.gaps">Supprimer les trous</button>
 
       </section>
 
@@ -132,10 +132,10 @@
       <!-- ============================================================ -->
       <section class="log-area">
         <div class="log-header">
-          <span>Journal</span>
+          <span data-i18n="log.title">Journal</span>
           <div class="log-header-actions">
-            <button id="diag-btn" type="button">Diagnostic</button>
-            <button id="clear-log" type="button">Effacer</button>
+            <button id="diag-btn" type="button" data-i18n="log.diag">Diagnostic</button>
+            <button id="clear-log" type="button" data-i18n="log.clear">Effacer</button>
           </div>
         </div>
         <div id="log"></div>
@@ -144,6 +144,10 @@
     </main>
 
     <footer>
+      <select id="lang-select" class="lang-select" title="Langue / Language">
+        <option value="fr">FR</option>
+        <option value="en">EN</option>
+      </select>
       <span>v1.2.0 - Maxime Bodivit</span>
     </footer>
 
