@@ -23,6 +23,7 @@
   const redoBtn     = document.getElementById('redo-btn');
   const logEl       = document.getElementById('log');
   const clearLogBtn = document.getElementById('clear-log');
+  const diagBtn     = document.getElementById('diag-btn');
   const tabBtns     = document.querySelectorAll('.tab');
   const tabPanels   = document.querySelectorAll('.tab-content');
 
@@ -449,11 +450,29 @@
   }
 
   // ------------------------------------------------------------------
+  // Diagnostic / self-test (read-only host report)
+  // ------------------------------------------------------------------
+  async function diagnostic() {
+    log('info', 'Diagnostic en cours...');
+    const raw = await evalScript('runDiagnostic()');
+    let r;
+    try { r = JSON.parse(raw); }
+    catch (e) { log('err', 'Reponse invalide du host: ' + raw); return; }
+    if (r.error) log('err', 'Diagnostic: ' + r.error);
+    const checks = r.checks || [];
+    for (let i = 0; i < checks.length; i++) {
+      log('info', '  ' + checks[i].label + ' : ' + checks[i].value);
+    }
+    log('ok', 'Diagnostic termine.');
+  }
+
+  // ------------------------------------------------------------------
   // Event wiring
   // ------------------------------------------------------------------
   refreshBtn.addEventListener('click', refreshTracks);
   undoBtn.addEventListener('click', () => hostUndoRedo('doUndo'));
   redoBtn.addEventListener('click', () => hostUndoRedo('doRedo'));
+  diagBtn.addEventListener('click', diagnostic);
   generateBtn.addEventListener('click', generate);
   previewBtn.addEventListener('click', preview);
   gapsBtn.addEventListener('click', removeGaps);

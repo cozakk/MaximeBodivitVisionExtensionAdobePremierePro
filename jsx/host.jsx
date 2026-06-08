@@ -380,6 +380,57 @@ function doRedo() {
     return JSON.stringify({ ok: false, message: 'Retablissement par script non disponible sur cette version. Utilise Ctrl+Maj+Z dans Premiere.' });
 }
 
+/**
+ * Self-test: report the host environment and whether the APIs the panel
+ * relies on are present. Read-only — changes nothing in the project.
+ */
+function runDiagnostic() {
+    var report = { ok: true, checks: [] };
+    function add(label, value) { report.checks.push({ label: label, value: String(value) }); }
+
+    try {
+        add('Application', app ? 'Premiere Pro' : 'absente');
+        try { add('Version', app.version); } catch (e) { add('Version', 'inconnue'); }
+
+        var proj = app.project;
+        add('Projet ouvert', proj ? 'oui' : 'non');
+        add('Time API', (typeof Time !== 'undefined') ? 'oui' : 'non');
+        add('openUndoGroup', (proj && typeof proj.openUndoGroup === 'function') ? 'oui' : 'non');
+
+        if (proj) {
+            var seq = proj.activeSequence;
+            add('Sequence active', seq ? seq.name : 'aucune');
+            if (seq) {
+                add('Pistes video', seq.videoTracks.numTracks);
+                add('Pistes audio', seq.audioTracks.numTracks);
+
+                if (seq.videoTracks.numTracks > 0) {
+                    var t = seq.videoTracks[0];
+                    add('overwriteClip', (typeof t.overwriteClip === 'function') ? 'oui' : 'non');
+                    if (t.clips.numItems > 0) {
+                        var c = t.clips[0];
+                        add('clip.move', (typeof c.move === 'function') ? 'oui' : 'non');
+                        add('clip.isSelected', (typeof c.isSelected === 'function') ? 'oui' : 'non');
+                        add('projectItem.setInPoint', (c.projectItem && typeof c.projectItem.setInPoint === 'function') ? 'oui' : 'non');
+                    } else {
+                        add('Clips V1', 'aucun (ouvre une sequence avec des clips pour tester move/trim)');
+                    }
+                }
+            }
+        }
+
+        // QE DOM (needed for new tracks + transitions)
+        var qeOk = false;
+        try { app.enableQE(); qeOk = (typeof qe !== 'undefined' && !!qe.project); } catch (e) {}
+        add('QE DOM', qeOk ? 'disponible' : 'indisponible');
+
+    } catch (e) {
+        report.ok = false;
+        report.error = e.toString();
+    }
+    return JSON.stringify(report);
+}
+
 function getSequenceTrackInfo() {
     try {
         if (!app.project) return JSON.stringify({ error: 'Aucun projet ouvert.' });

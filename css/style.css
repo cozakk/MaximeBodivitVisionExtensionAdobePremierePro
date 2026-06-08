@@ -292,6 +292,8 @@ button.secondary:disabled { opacity: 0.5; cursor: not-allowed; }
   letter-spacing: 0.5px;
 }
 
+.log-header-actions { display: flex; gap: 10px; }
+
 .log-header button {
   background: transparent;
   border: none;
