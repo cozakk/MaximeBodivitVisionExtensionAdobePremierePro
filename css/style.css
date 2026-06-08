@@ -251,6 +251,24 @@ button.primary {
 button.primary:hover:not(:disabled) { background: #5a8de0; }
 button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* ---------- Button row (preview + generate) ---------- */
+.btn-row { display: flex; gap: 8px; margin-top: 4px; }
+.btn-row .primary { margin-top: 0; flex: 1; }
+.btn-row .secondary { flex: 1; }
+
+button.secondary {
+  background: #2c2c2c;
+  border: 1px solid #3a3a3a;
+  color: #ddd;
+  padding: 10px 14px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+button.secondary:hover:not(:disabled) { background: #3a3a3a; color: #fff; }
+button.secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* ---------- Log ---------- */
 .log-area {
   display: flex;

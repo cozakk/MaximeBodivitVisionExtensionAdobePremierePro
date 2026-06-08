@@ -34,6 +34,7 @@
   const optZoom     = document.getElementById('opt-zoom');
   const optMarker   = document.getElementById('opt-marker');
   const generateBtn = document.getElementById('generate-btn');
+  const previewBtn  = document.getElementById('preview-btn');
   const presetBtns  = document.querySelectorAll('.preset');
 
   // Gaps tab
@@ -222,7 +223,7 @@
   // ------------------------------------------------------------------
   // B-Roll generation
   // ------------------------------------------------------------------
-  async function generate() {
+  function buildBRollParams() {
     const params = {
       duration:    parseFloat(durationEl.value),
       position:    positionEl.value,
@@ -233,19 +234,24 @@
       marker:      optMarker.checked,
       onlySelected: optSelected.checked
     };
-
     if (!params.duration || params.duration <= 0) {
       log('err', 'Duree invalide.');
-      return;
+      return null;
     }
     if (isNaN(params.srcTrackIdx) || isNaN(params.dstTrackIdx)) {
       log('err', 'Pistes source/destination invalides.');
-      return;
+      return null;
     }
     if (params.srcTrackIdx === params.dstTrackIdx) {
       log('err', 'Les pistes source et destination doivent etre differentes.');
-      return;
+      return null;
     }
+    return params;
+  }
+
+  async function generate() {
+    const params = buildBRollParams();
+    if (!params) return;
 
     generateBtn.disabled = true;
     generateBtn.textContent = 'Generation en cours...';
@@ -283,6 +289,47 @@
     generateBtn.disabled = false;
     generateBtn.textContent = 'Generer les extraits';
     await refreshTracks();
+  }
+
+  // ------------------------------------------------------------------
+  // B-Roll dry-run preview (changes nothing in the timeline)
+  // ------------------------------------------------------------------
+  async function preview() {
+    const params = buildBRollParams();
+    if (!params) return;
+    params.dryRun = true;
+
+    previewBtn.disabled = true;
+    previewBtn.textContent = 'Calcul...';
+    log('info', 'Previsualisation B-Roll (aucune modification de la timeline)...');
+
+    const payload = JSON.stringify(params);
+    const raw = await evalScript("generateBRoll('" + jsString(payload) + "')");
+
+    let result;
+    try { result = JSON.parse(raw); }
+    catch (e) {
+      log('err', 'Reponse invalide du host: ' + raw);
+      previewBtn.disabled = false;
+      previewBtn.textContent = 'Previsualiser';
+      return;
+    }
+
+    if (result.error) {
+      log('err', result.error);
+    } else {
+      log('ok', 'Apercu: ' + result.count + ' extrait(s) seraient crees sur V' + (result.dstTrackIdx + 1) + '.');
+      const list = result.preview || [];
+      for (let i = 0; i < list.length; i++) {
+        log('info', '  - ' + list[i].name + ' @ ' + list[i].startSec + 's (duree ' + list[i].durationSec + 's)');
+      }
+      if (result.warnings && result.warnings.length) {
+        for (let i = 0; i < result.warnings.length; i++) log('warn', result.warnings[i]);
+      }
+    }
+
+    previewBtn.disabled = false;
+    previewBtn.textContent = 'Previsualiser';
   }
 
   // ------------------------------------------------------------------
@@ -383,6 +430,7 @@
   // ------------------------------------------------------------------
   refreshBtn.addEventListener('click', refreshTracks);
   generateBtn.addEventListener('click', generate);
+  previewBtn.addEventListener('click', preview);
   gapsBtn.addEventListener('click', removeGaps);
   gapsAllBtn.addEventListener('click', () => setAllGaps(true));
   gapsNoneBtn.addEventListener('click', () => setAllGaps(false));

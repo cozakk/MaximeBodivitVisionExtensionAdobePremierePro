@@ -382,24 +382,35 @@ function generateBRoll(jsonStr) {
             }
         }
 
-        // ----- Ensure destination track exists -----
-        var dstIdx = _ensureVideoTrack(seq, p.dstTrackIdx);
-        if (dstIdx >= seq.videoTracks.numTracks) {
-            return JSON.stringify({ error: 'Impossible de creer la piste destination V' + (p.dstTrackIdx + 1) + '. QE DOM indisponible.' });
+        // ----- Resolve destination track -----
+        // In dry-run we never create tracks (no side effects); dstIdx is
+        // then purely informational.
+        var dstIdx, dstTrack;
+        if (p.dryRun) {
+            dstIdx = p.dstTrackIdx;
+            dstTrack = null;
+        } else {
+            dstIdx = _ensureVideoTrack(seq, p.dstTrackIdx);
+            if (dstIdx >= seq.videoTracks.numTracks) {
+                return JSON.stringify({ error: 'Impossible de creer la piste destination V' + (p.dstTrackIdx + 1) + '. QE DOM indisponible.' });
+            }
+            dstTrack = seq.videoTracks[dstIdx];
         }
-        var dstTrack = seq.videoTracks[dstIdx];
 
         // ----- Begin undo group so the whole operation is one Ctrl+Z -----
         // openUndoGroup is the Premiere Pro idiomatic way; if missing we
-        // fall back silently.
-        var undoOpen = false;
-        try { app.project.openUndoGroup && app.project.openUndoGroup('Generate B-Roll'); undoOpen = true; } catch (e) {}
-        if (!undoOpen) {
-            try { app.enableQE(); qe.project.getActiveSequence().openUndoGroup && qe.project.getActiveSequence().openUndoGroup('Generate B-Roll'); undoOpen = true; } catch (e) {}
+        // fall back silently. Skipped in dry-run (nothing changes).
+        if (!p.dryRun) {
+            var undoOpen = false;
+            try { app.project.openUndoGroup && app.project.openUndoGroup('Generate B-Roll'); undoOpen = true; } catch (e) {}
+            if (!undoOpen) {
+                try { app.enableQE(); qe.project.getActiveSequence().openUndoGroup && qe.project.getActiveSequence().openUndoGroup('Generate B-Roll'); undoOpen = true; } catch (e) {}
+            }
         }
 
         var created = 0;
         var skipped = 0;
+        var preview = [];
         var requested = p.duration;
 
         for (var i = 0; i < srcClips.length; i++) {
@@ -437,6 +448,13 @@ function generateBRoll(jsonStr) {
             var destEnd   = destStart + segDur;
             var mediaIn   = src.inPointSec + offset;
             var mediaOut  = mediaIn + segDur;
+
+            // ----- Dry-run: record the plan and change nothing -----
+            if (p.dryRun) {
+                preview.push({ name: src.name, startSec: _r(destStart), durationSec: _r(segDur) });
+                created++;
+                continue;
+            }
 
             // ----- Capture the source clip's color label so we can mirror it -----
             var srcColor = _getColorLabel(src.ref);
@@ -496,7 +514,20 @@ function generateBRoll(jsonStr) {
         }
 
         // ----- Close undo group -----
-        try { app.project.closeUndoGroup && app.project.closeUndoGroup(); } catch (e) {}
+        if (!p.dryRun) {
+            try { app.project.closeUndoGroup && app.project.closeUndoGroup(); } catch (e) {}
+        }
+
+        if (p.dryRun) {
+            return JSON.stringify({
+                ok: true,
+                dryRun: true,
+                count: preview.length,
+                preview: preview,
+                dstTrackIdx: dstIdx,
+                warnings: warnings
+            });
+        }
 
         return JSON.stringify({
             created: created,
