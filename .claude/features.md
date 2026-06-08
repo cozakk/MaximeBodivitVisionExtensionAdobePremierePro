@@ -74,10 +74,48 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - **Internationalisation** : couvre les libellés et infobulles de l'interface
   (les messages techniques du journal restent en français).
 
-## Idées / À venir (non implémenté)
+## Backlog d'idées (à planifier — non codé pour l'instant)
 
-- [ ] Tests automatisés en CI (le bouton Diagnostic couvre un auto-test manuel)
-- [ ] Compactage : fermer aussi le trou de tête commun en gardant la synchro inter-pistes
+> Liste de fonctionnalités candidates dans lesquelles piocher. Cocher quand
+> implémenté, ou déplacer vers les sections du haut.
+
+### B-Roll
+- [ ] Espacement régulier des extraits sur la timeline (au lieu de garder leur position d'origine)
+- [ ] Durée aléatoire entre un min et un max (au lieu d'une durée fixe)
+- [ ] Échantillonnage : ne traiter qu'un clip sur N
+- [ ] Exclure les clips plus courts qu'un seuil configurable
+- [ ] Répartir les extraits sur plusieurs pistes destination en alternance
 - [ ] Génération B-Roll depuis plusieurs pistes source en une passe
+- [ ] Vitesse de l'extrait (ralenti / accéléré, %) ou lecture inversée
+- [ ] Préfixe de nommage configurable pour les extraits
+- [ ] Copier les effets/attributs du clip source vers l'extrait
 - [ ] Choix du type et de la durée de transition
-- [ ] Export / import des réglages (presets nommés)
+- [ ] Générer les extraits dans une nouvelle séquence dédiée
+
+### Compactage
+- [ ] Compacter uniquement entre deux marqueurs ou une plage In/Out
+- [ ] Conserver un espace fixe entre clips (au lieu de coller à zéro)
+- [ ] Aperçu (dry-run) listant les trous avant suppression
+- [ ] Fermer aussi le trou de tête commun en gardant la synchro inter-pistes
+- [ ] Détecter et supprimer les clips vides / silences
+
+### Interface & confort
+- [ ] Profils / presets de réglages nommés (sauvegarder, charger)
+- [ ] Export / import des réglages (fichier .json)
+- [ ] Bouton « Annuler la dernière génération » (retire les extraits créés)
+- [ ] Barre de progression pour les opérations longues
+- [ ] Confirmation avant une opération qui modifie beaucoup de clips
+- [ ] Affichage durée totale / nombre de clips de la séquence
+- [ ] Export du journal dans un fichier texte
+- [ ] Thème clair en plus du thème sombre
+
+### Audio
+- [ ] Compactage audio indépendant de la vidéo (délier avant)
+- [ ] Normaliser / ajuster le gain des extraits
+- [ ] Détection de silences pour découpe automatique
+
+### Divers
+- [ ] Internationalisation : traduire aussi les messages du journal
+- [ ] Langues supplémentaires (ES, DE…)
+- [ ] Mode batch sur plusieurs séquences
+- [ ] Tests automatisés en CI (le bouton Diagnostic couvre un auto-test manuel)
