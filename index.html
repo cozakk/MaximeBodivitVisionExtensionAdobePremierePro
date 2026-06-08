@@ -95,11 +95,15 @@
       <section class="tab-content hidden" id="tab-gaps">
 
         <div class="field">
-          <label for="gaps-track">Piste a compacter</label>
-          <select id="gaps-track">
-            <option value="video:0">V1</option>
-          </select>
-          <p class="hint">Tous les trous entre clips de cette piste seront supprimes. Les clips sont decales vers la gauche pour se toucher.</p>
+          <label>Pistes a compacter</label>
+          <div id="gaps-tracks" class="track-checklist">
+            <!-- cases a cocher injectees par main.js -->
+          </div>
+          <div class="row mini-row">
+            <button type="button" id="gaps-all" class="mini">Tout</button>
+            <button type="button" id="gaps-none" class="mini">Aucune</button>
+          </div>
+          <p class="hint">Coche une ou plusieurs pistes. Tous les trous entre clips de chaque piste cochee sont supprimes (clips decales vers la gauche). L'ensemble compte comme une seule annulation.</p>
         </div>
 
         <button id="gaps-btn" class="primary">Supprimer les trous</button>

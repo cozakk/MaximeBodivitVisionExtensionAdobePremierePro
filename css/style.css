@@ -205,6 +205,36 @@ select {
   cursor: pointer;
 }
 
+/* ---------- Track checklist (multi-track compaction) ---------- */
+.track-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 160px;
+  overflow-y: auto;
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 3px;
+  padding: 6px 8px;
+}
+
+.track-checklist .check { font-size: 11px; padding: 2px 0; }
+.track-checklist .empty { color: #777; font-size: 11px; font-style: italic; }
+
+.mini-row { margin-top: 6px; gap: 6px; }
+
+button.mini {
+  background: #2c2c2c;
+  border: 1px solid #3a3a3a;
+  color: #ccc;
+  font-family: inherit;
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+button.mini:hover { background: #3a3a3a; color: #fff; }
+
 /* ---------- Primary button ---------- */
 button.primary {
   background: #4a7fcf;

@@ -488,9 +488,9 @@ function generateBRoll(jsonStr) {
 }
 
 /**
- * Remove all gaps between clips on a single track of the active sequence.
+ * Compact ONE track: close every gap between its clips, gap-at-a-time,
+ * re-snapshotting after each move.
  *
- * Algorithm (gap-at-a-time, re-snapshotting each pass):
  *   1. Snapshot the track, sorted by start time.
  *   2. Find the FIRST clip whose start lies after where it should sit
  *      (the running end of the previous clip).
@@ -500,98 +500,122 @@ function generateBRoll(jsonStr) {
  * Why one-at-a-time + re-snapshot: moving a track item invalidates the
  * cached TrackItem references of the other clips, so moving from a single
  * up-front snapshot only ever closed the first gap. Re-querying the track
- * after each move keeps every reference live.
+ * after each move keeps every reference live. Bounded by the clip count so
+ * a no-op move() can never loop forever.
  *
- * The move() API takes a Time RELATIVE to the clip's current position
- * (negative = earlier). Linked audio/video items move together as long
- * as the link-sync default is on (which is Premiere's default).
+ * move() takes a Time RELATIVE to the clip's current position (negative =
+ * earlier). Linked audio/video items move together (Premiere's default).
  *
- * @param {string} jsonStr JSON: { trackType: 'video'|'audio', trackIdx: int }
+ * Returns { shifted, totalGapClosed }.
+ */
+function _compactTrack(track, warnings, label) {
+    var initial = _snapshotClips(track);
+    if (initial.length === 0) return { shifted: 0, totalGapClosed: 0 };
+
+    var shifted = 0;
+    var totalGapClosed = 0;
+    var maxPasses = initial.length + 2;
+    var pass = 0;
+
+    while (pass++ < maxPasses) {
+        var clips = _snapshotClips(track);
+
+        // Find the first clip that starts after where it should.
+        var prevEnd = 0;
+        var target = null;
+        var gap = 0;
+        for (var i = 0; i < clips.length; i++) {
+            var c = clips[i];
+            if (c.startSec > prevEnd + 0.001) { target = c; gap = c.startSec - prevEnd; break; }
+            prevEnd = c.startSec + c.durationSec;
+        }
+        if (!target) break; // no gaps left — done
+
+        // Shift it (and its linked items) left to butt against prevEnd.
+        try {
+            target.ref.move(_timeFromSeconds(-gap));
+        } catch (e) {
+            warnings.push('Deplacement a echoue (' + label + ') pour "' + target.name + '": ' + e.toString());
+            break;
+        }
+
+        // Verify the move actually happened: a clip of the same duration
+        // should now sit at prevEnd. If not, move() is a no-op on this
+        // Premiere version — stop instead of looping pointlessly.
+        var after = _snapshotClips(track);
+        var moved = false;
+        for (var j = 0; j < after.length; j++) {
+            if (Math.abs(after[j].startSec - prevEnd) < 0.02 &&
+                Math.abs(after[j].durationSec - target.durationSec) < 0.02) { moved = true; break; }
+        }
+        if (!moved) {
+            warnings.push('Le clip "' + target.name + '" ne s\'est pas deplace (' + label + '; move() sans effet sur cette version).');
+            break;
+        }
+
+        totalGapClosed += gap;
+        shifted++;
+    }
+
+    return { shifted: shifted, totalGapClosed: totalGapClosed };
+}
+
+/**
+ * Remove all gaps on one OR several tracks of the active sequence.
+ *
+ * @param {string} jsonStr JSON, either:
+ *   { tracks: [ { trackType:'video'|'audio', trackIdx:int }, ... ] }   (multi)
+ *   { trackType:'video'|'audio', trackIdx:int }                        (single, back-compat)
  */
 function removeGaps(jsonStr) {
     var warnings = [];
     try {
         var p = JSON.parse(jsonStr);
-        var trackType = (p.trackType === 'audio') ? 'audio' : 'video';
-        var trackIdx = p.trackIdx;
+
+        // Normalise to a list of { trackType, trackIdx }.
+        var list = p.tracks;
+        if (!list || !list.length) {
+            if (typeof p.trackType !== 'undefined') {
+                list = [{ trackType: p.trackType, trackIdx: p.trackIdx }];
+            } else {
+                return JSON.stringify({ error: 'Aucune piste selectionnee.' });
+            }
+        }
 
         if (!app.project) return JSON.stringify({ error: 'Aucun projet ouvert.' });
         var seq = app.project.activeSequence;
         if (!seq) return JSON.stringify({ error: 'Aucune sequence active.' });
 
-        var tracks = (trackType === 'audio') ? seq.audioTracks : seq.videoTracks;
-        if (trackIdx < 0 || trackIdx >= tracks.numTracks) {
-            return JSON.stringify({ error: 'Piste ' + (trackType === 'audio' ? 'A' : 'V') + (trackIdx + 1) + ' inexistante.' });
-        }
-        var track = tracks[trackIdx];
-
-        // ----- Initial emptiness check -----
-        var initial = _snapshotClips(track);
-        if (initial.length === 0) {
-            return JSON.stringify({ ok: true, shifted: 0, totalGapClosed: 0, warnings: ['Piste vide, rien a faire.'] });
-        }
-
-        // ----- One undo group for the whole operation -----
+        // ----- One undo group for the WHOLE multi-track operation -----
         try { app.project.openUndoGroup && app.project.openUndoGroup('Supprimer les trous'); } catch (e) {}
 
-        var shifted = 0;
+        var totalShifted = 0;
         var totalGapClosed = 0;
+        var processed = 0;
 
-        // Close gaps ONE AT A TIME, re-snapshotting the track after every
-        // move. Moving a track item in Premiere can invalidate the cached
-        // TrackItem references of the OTHER clips on the track, so iterating
-        // a single up-front snapshot only ever closed the first gap (every
-        // later c.ref pointed at a stale item and its move() silently failed).
-        // Re-querying the track each pass guarantees we always move a live
-        // reference. Bounded by the clip count so a no-op move() can never
-        // loop forever.
-        var maxPasses = initial.length + 2;
-        var pass = 0;
-        while (pass++ < maxPasses) {
-            var clips = _snapshotClips(track);
+        for (var k = 0; k < list.length; k++) {
+            var item = list[k];
+            var trackType = (item.trackType === 'audio') ? 'audio' : 'video';
+            var tracks = (trackType === 'audio') ? seq.audioTracks : seq.videoTracks;
+            var label = (trackType === 'audio' ? 'A' : 'V') + (item.trackIdx + 1);
 
-            // Find the first clip that starts after where it should.
-            var prevEnd = 0;
-            var target = null;
-            var gap = 0;
-            for (var i = 0; i < clips.length; i++) {
-                var c = clips[i];
-                if (c.startSec > prevEnd + 0.001) { target = c; gap = c.startSec - prevEnd; break; }
-                prevEnd = c.startSec + c.durationSec;
-            }
-            if (!target) break; // no gaps left — done
-
-            // Shift it (and its linked items) left to butt against prevEnd.
-            try {
-                target.ref.move(_timeFromSeconds(-gap));
-            } catch (e) {
-                warnings.push('Deplacement a echoue pour "' + target.name + '": ' + e.toString());
-                break;
+            if (item.trackIdx < 0 || item.trackIdx >= tracks.numTracks) {
+                warnings.push('Piste ' + label + ' inexistante, ignoree.');
+                continue;
             }
 
-            // Verify the move actually happened: a clip of the same duration
-            // should now sit at prevEnd. If not, move() is a no-op on this
-            // Premiere version — stop instead of looping pointlessly.
-            var after = _snapshotClips(track);
-            var moved = false;
-            for (var j = 0; j < after.length; j++) {
-                if (Math.abs(after[j].startSec - prevEnd) < 0.02 &&
-                    Math.abs(after[j].durationSec - target.durationSec) < 0.02) { moved = true; break; }
-            }
-            if (!moved) {
-                warnings.push('Le clip "' + target.name + '" ne s\'est pas deplace (methode move() sans effet sur cette version).');
-                break;
-            }
-
-            totalGapClosed += gap;
-            shifted++;
+            var res = _compactTrack(tracks[item.trackIdx], warnings, label);
+            totalShifted += res.shifted;
+            totalGapClosed += res.totalGapClosed;
+            processed++;
         }
 
         try { app.project.closeUndoGroup && app.project.closeUndoGroup(); } catch (e) {}
 
         return JSON.stringify({
             ok: true,
-            shifted: shifted,
+            tracks: processed,
+            shifted: totalShifted,
             totalGapClosed: _r(totalGapClosed),
             warnings: warnings
         });

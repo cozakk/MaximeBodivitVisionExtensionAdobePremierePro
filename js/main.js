@@ -36,8 +36,10 @@
   const presetBtns  = document.querySelectorAll('.preset');
 
   // Gaps tab
-  const gapsTrackEl = document.getElementById('gaps-track');
-  const gapsBtn     = document.getElementById('gaps-btn');
+  const gapsTracksEl = document.getElementById('gaps-tracks');
+  const gapsAllBtn   = document.getElementById('gaps-all');
+  const gapsNoneBtn  = document.getElementById('gaps-none');
+  const gapsBtn      = document.getElementById('gaps-btn');
 
   // ------------------------------------------------------------------
   // ExtendScript bridge
@@ -79,7 +81,7 @@
   // that add new controls simply append their id here.
   const PERSIST_IDS = [
     'duration', 'position', 'src-track', 'dst-track',
-    'opt-random', 'opt-zoom', 'opt-marker', 'gaps-track'
+    'opt-random', 'opt-zoom', 'opt-marker'
   ];
   const LS_SETTINGS = 'visionext.settings';
   const LS_PREFS    = 'visionext.prefs';
@@ -208,27 +210,8 @@
       dstTrackEl.value = '1';
     }
 
-    // ----- Gaps dropdown : ALL video tracks + ALL audio tracks -----
-    // Value encoded as "video:N" or "audio:N" so the host can route it.
-    const prevGaps = gapsTrackEl.value;
-    gapsTrackEl.innerHTML = '';
-    for (let i = 0; i < vCount; i++) {
-      const opt = document.createElement('option');
-      opt.value = 'video:' + i;
-      opt.textContent = 'V' + (i + 1);
-      gapsTrackEl.appendChild(opt);
-    }
-    for (let i = 0; i < aCount; i++) {
-      const opt = document.createElement('option');
-      opt.value = 'audio:' + i;
-      opt.textContent = 'A' + (i + 1);
-      gapsTrackEl.appendChild(opt);
-    }
-    if (prevGaps && gapsTrackEl.querySelector('option[value="' + prevGaps + '"]')) {
-      gapsTrackEl.value = prevGaps;
-    } else {
-      gapsTrackEl.value = 'video:0';
-    }
+    // ----- Gaps checklist : ALL video tracks + ALL audio tracks -----
+    buildGapsChecklist(vCount, aCount);
 
     // Re-apply persisted selections now that the track options exist.
     restoreSettings();
@@ -300,24 +283,70 @@
   }
 
   // ------------------------------------------------------------------
-  // Gap removal
+  // Gap removal (one or several tracks)
   // ------------------------------------------------------------------
-  async function removeGaps() {
-    const sel = gapsTrackEl.value || 'video:0';
-    const [type, idxStr] = sel.split(':');
-    const idx = parseInt(idxStr, 10);
+  // Build the checkbox list of every video + audio track. Track key is
+  // "video:N" / "audio:N" so the host can route each one.
+  function buildGapsChecklist(vCount, aCount) {
+    const saved = getPref('gapsChecked', null); // array of keys, or null
+    gapsTracksEl.innerHTML = '';
 
-    if (isNaN(idx) || (type !== 'video' && type !== 'audio')) {
-      log('err', 'Selection de piste invalide.');
-      return;
+    const addRow = (key, labelTxt) => {
+      const lbl = document.createElement('label');
+      lbl.className = 'check';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'gaps-cb';
+      cb.value = key;
+      cb.checked = saved ? (saved.indexOf(key) !== -1) : (key === 'video:0');
+      cb.addEventListener('change', saveGapsChecked);
+      const span = document.createElement('span');
+      span.textContent = labelTxt;
+      lbl.appendChild(cb);
+      lbl.appendChild(span);
+      gapsTracksEl.appendChild(lbl);
+    };
+
+    for (let i = 0; i < vCount; i++) addRow('video:' + i, 'V' + (i + 1));
+    for (let i = 0; i < aCount; i++) addRow('audio:' + i, 'A' + (i + 1));
+
+    if (vCount + aCount === 0) {
+      const e = document.createElement('div');
+      e.className = 'empty';
+      e.textContent = 'Aucune piste.';
+      gapsTracksEl.appendChild(e);
     }
+  }
 
-    const params = { trackType: type, trackIdx: idx };
+  function checkedGapsKeys() {
+    return Array.prototype.slice.call(gapsTracksEl.querySelectorAll('.gaps-cb'))
+      .filter((cb) => cb.checked)
+      .map((cb) => cb.value);
+  }
+  function saveGapsChecked() { savePref('gapsChecked', checkedGapsKeys()); }
+  function setAllGaps(state) {
+    gapsTracksEl.querySelectorAll('.gaps-cb').forEach((cb) => { cb.checked = state; });
+    saveGapsChecked();
+  }
+  function prettyTrack(key) {
+    const parts = key.split(':');
+    return (parts[0] === 'audio' ? 'A' : 'V') + (parseInt(parts[1], 10) + 1);
+  }
+
+  async function removeGaps() {
+    const keys = checkedGapsKeys();
+    if (!keys.length) { log('err', 'Aucune piste cochee.'); return; }
+
+    const tracks = keys.map((k) => {
+      const parts = k.split(':');
+      return { trackType: parts[0], trackIdx: parseInt(parts[1], 10) };
+    });
+
     gapsBtn.disabled = true;
     gapsBtn.textContent = 'Compactage en cours...';
-    log('info', 'Compactage: ' + (type === 'video' ? 'V' : 'A') + (idx + 1));
+    log('info', 'Compactage de ' + tracks.length + ' piste(s): ' + keys.map(prettyTrack).join(', '));
 
-    const payload = JSON.stringify(params);
+    const payload = JSON.stringify({ tracks: tracks });
     const raw = await evalScript("removeGaps('" + jsString(payload) + "')");
 
     let result;
@@ -332,8 +361,9 @@
     if (result.error) {
       log('err', result.error);
     } else {
-      log('ok', 'Termine. ' + (result.shifted || 0) + ' clip(s) deplace(s). ' +
-          'Total supprime: ' + (result.totalGapClosed || 0) + 's.');
+      log('ok', 'Termine. ' + (result.shifted || 0) + ' clip(s) deplace(s) sur ' +
+          (result.tracks || tracks.length) + ' piste(s). Total supprime: ' +
+          (result.totalGapClosed || 0) + 's.');
       if (result.warnings && result.warnings.length) {
         for (let i = 0; i < result.warnings.length; i++) {
           log('warn', result.warnings[i]);
@@ -351,6 +381,8 @@
   refreshBtn.addEventListener('click', refreshTracks);
   generateBtn.addEventListener('click', generate);
   gapsBtn.addEventListener('click', removeGaps);
+  gapsAllBtn.addEventListener('click', () => setAllGaps(true));
+  gapsNoneBtn.addEventListener('click', () => setAllGaps(false));
   clearLogBtn.addEventListener('click', () => { logEl.innerHTML = ''; });
 
   presetBtns.forEach((btn) => {
