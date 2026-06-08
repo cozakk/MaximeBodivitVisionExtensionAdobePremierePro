@@ -359,6 +359,27 @@ function pingHost() {
     }
 }
 
+/**
+ * Undo / redo. Premiere Pro does NOT expose a reliable scripting undo, so we
+ * only call app.undo()/app.redo() if a given build happens to provide them
+ * (checked via typeof — safe), and otherwise return an informative message
+ * pointing at the native Ctrl+Z / Ctrl+Shift+Z shortcuts. We never guess
+ * menu-command ids, which could trigger unrelated (destructive) actions.
+ */
+function doUndo() {
+    try {
+        if (app && typeof app.undo === 'function') { app.undo(); return JSON.stringify({ ok: true }); }
+    } catch (e) {}
+    return JSON.stringify({ ok: false, message: 'Annulation par script non disponible sur cette version. Utilise Ctrl+Z dans Premiere.' });
+}
+
+function doRedo() {
+    try {
+        if (app && typeof app.redo === 'function') { app.redo(); return JSON.stringify({ ok: true }); }
+    } catch (e) {}
+    return JSON.stringify({ ok: false, message: 'Retablissement par script non disponible sur cette version. Utilise Ctrl+Maj+Z dans Premiere.' });
+}
+
 function getSequenceTrackInfo() {
     try {
         if (!app.project) return JSON.stringify({ error: 'Aucun projet ouvert.' });

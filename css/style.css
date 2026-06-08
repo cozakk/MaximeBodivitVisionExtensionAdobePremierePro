@@ -35,6 +35,9 @@ header h1 {
   letter-spacing: 0.3px;
 }
 
+.header-actions { display: flex; align-items: center; gap: 2px; }
+
+.icon-btn,
 #refresh-btn {
   background: transparent;
   border: none;
@@ -44,7 +47,9 @@ header h1 {
   padding: 2px 6px;
   line-height: 1;
 }
+.icon-btn:hover,
 #refresh-btn:hover { color: #fff; }
+.icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ---------- Tabs ---------- */
 .tabs {

@@ -19,6 +19,8 @@
   // Common
   const seqNameEl   = document.getElementById('seq-name');
   const refreshBtn  = document.getElementById('refresh-btn');
+  const undoBtn     = document.getElementById('undo-btn');
+  const redoBtn     = document.getElementById('redo-btn');
   const logEl       = document.getElementById('log');
   const clearLogBtn = document.getElementById('clear-log');
   const tabBtns     = document.querySelectorAll('.tab');
@@ -430,9 +432,28 @@
   }
 
   // ------------------------------------------------------------------
+  // Undo / redo (relays to the host; Premiere scripting has no reliable
+  // undo, so this usually just reminds the user of Ctrl+Z).
+  // ------------------------------------------------------------------
+  async function hostUndoRedo(fn) {
+    const raw = await evalScript(fn + '()');
+    let r;
+    try { r = JSON.parse(raw); }
+    catch (e) { log('err', 'Reponse invalide du host: ' + raw); return; }
+    if (r.ok) {
+      log('ok', fn === 'doUndo' ? 'Annule.' : 'Retabli.');
+      await refreshTracks();
+    } else {
+      log('warn', r.message || 'Operation non disponible.');
+    }
+  }
+
+  // ------------------------------------------------------------------
   // Event wiring
   // ------------------------------------------------------------------
   refreshBtn.addEventListener('click', refreshTracks);
+  undoBtn.addEventListener('click', () => hostUndoRedo('doUndo'));
+  redoBtn.addEventListener('click', () => hostUndoRedo('doRedo'));
   generateBtn.addEventListener('click', generate);
   previewBtn.addEventListener('click', preview);
   gapsBtn.addEventListener('click', removeGaps);
