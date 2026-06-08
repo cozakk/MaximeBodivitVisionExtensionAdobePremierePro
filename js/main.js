@@ -1,0 +1,298 @@
+/*
+ * Maxime Bodivit Vision Ext - Panel logic
+ *
+ * Communicates with the Premiere Pro host application via the CEP
+ * `__adobe_cep__.evalScript` bridge. All timeline manipulation happens
+ * in ExtendScript (see jsx/host.jsx).
+ *
+ * Two tabs:
+ *   - B-Roll : extract portions from a source video track into a
+ *              destination track, with full handles on each new clip.
+ *   - Compactage : remove all gaps between clips on a chosen track.
+ */
+(function () {
+  'use strict';
+
+  // ------------------------------------------------------------------
+  // DOM references
+  // ------------------------------------------------------------------
+  // Common
+  const seqNameEl   = document.getElementById('seq-name');
+  const refreshBtn  = document.getElementById('refresh-btn');
+  const logEl       = document.getElementById('log');
+  const clearLogBtn = document.getElementById('clear-log');
+  const tabBtns     = document.querySelectorAll('.tab');
+  const tabPanels   = document.querySelectorAll('.tab-content');
+
+  // B-Roll tab
+  const durationEl  = document.getElementById('duration');
+  const positionEl  = document.getElementById('position');
+  const srcTrackEl  = document.getElementById('src-track');
+  const dstTrackEl  = document.getElementById('dst-track');
+  const optRandom   = document.getElementById('opt-random');
+  const optZoom     = document.getElementById('opt-zoom');
+  const optMarker   = document.getElementById('opt-marker');
+  const generateBtn = document.getElementById('generate-btn');
+  const presetBtns  = document.querySelectorAll('.preset');
+
+  // Gaps tab
+  const gapsTrackEl = document.getElementById('gaps-track');
+  const gapsBtn     = document.getElementById('gaps-btn');
+
+  // ------------------------------------------------------------------
+  // ExtendScript bridge
+  // ------------------------------------------------------------------
+  function evalScript(script) {
+    return new Promise((resolve) => {
+      if (window.__adobe_cep__ && window.__adobe_cep__.evalScript) {
+        window.__adobe_cep__.evalScript(script, (res) => resolve(res));
+      } else {
+        resolve(JSON.stringify({ error: 'CEP bridge unavailable' }));
+      }
+    });
+  }
+
+  function jsString(s) {
+    return String(s)
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\r/g, '\\r')
+      .replace(/\n/g, '\\n');
+  }
+
+  // ------------------------------------------------------------------
+  // Logging
+  // ------------------------------------------------------------------
+  function log(level, msg) {
+    const line = document.createElement('div');
+    line.className = 'log-line ' + level;
+    const stamp = new Date().toTimeString().slice(0, 8);
+    line.textContent = '[' + stamp + '] ' + msg;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // ------------------------------------------------------------------
+  // Tab switching
+  // ------------------------------------------------------------------
+  tabBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tab = btn.getAttribute('data-tab');
+      tabBtns.forEach((b) => b.classList.toggle('active', b === btn));
+      tabPanels.forEach((p) => p.classList.toggle('hidden', p.id !== 'tab-' + tab));
+    });
+  });
+
+  // ------------------------------------------------------------------
+  // Track list refresh - populates B-Roll selects AND gaps select.
+  // ------------------------------------------------------------------
+  async function refreshTracks() {
+    const raw = await evalScript('getSequenceTrackInfo()');
+    let info;
+    try { info = JSON.parse(raw); }
+    catch (e) {
+      log('err', 'Reponse invalide du host: ' + raw);
+      return;
+    }
+
+    if (info.error) {
+      seqNameEl.textContent = info.error;
+      log('warn', info.error);
+      return;
+    }
+
+    const vCount = info.videoTrackCount;
+    const aCount = info.audioTrackCount;
+    seqNameEl.textContent = 'Sequence: ' + info.name + ' (' + vCount + 'V / ' + aCount + 'A)';
+
+    // ----- B-Roll source dropdown : existing video tracks -----
+    const prevSrc = parseInt(srcTrackEl.value, 10);
+    srcTrackEl.innerHTML = '';
+    for (let i = 0; i < vCount; i++) {
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = 'V' + (i + 1);
+      srcTrackEl.appendChild(opt);
+    }
+    srcTrackEl.value = (!isNaN(prevSrc) && prevSrc < vCount) ? String(prevSrc) : '0';
+
+    // ----- B-Roll destination dropdown : V2..Vn + virtual "new" slot -----
+    const prevDst = parseInt(dstTrackEl.value, 10);
+    dstTrackEl.innerHTML = '';
+    for (let i = 1; i < vCount; i++) {
+      const opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = 'V' + (i + 1);
+      dstTrackEl.appendChild(opt);
+    }
+    const newOpt = document.createElement('option');
+    newOpt.value = String(vCount); // out-of-range => create new
+    newOpt.textContent = 'V' + (vCount + 1) + ' (nouvelle piste)';
+    dstTrackEl.appendChild(newOpt);
+    if (!isNaN(prevDst) && prevDst <= vCount) {
+      dstTrackEl.value = String(prevDst);
+    } else {
+      dstTrackEl.value = '1';
+    }
+
+    // ----- Gaps dropdown : ALL video tracks + ALL audio tracks -----
+    // Value encoded as "video:N" or "audio:N" so the host can route it.
+    const prevGaps = gapsTrackEl.value;
+    gapsTrackEl.innerHTML = '';
+    for (let i = 0; i < vCount; i++) {
+      const opt = document.createElement('option');
+      opt.value = 'video:' + i;
+      opt.textContent = 'V' + (i + 1);
+      gapsTrackEl.appendChild(opt);
+    }
+    for (let i = 0; i < aCount; i++) {
+      const opt = document.createElement('option');
+      opt.value = 'audio:' + i;
+      opt.textContent = 'A' + (i + 1);
+      gapsTrackEl.appendChild(opt);
+    }
+    if (prevGaps && gapsTrackEl.querySelector('option[value="' + prevGaps + '"]')) {
+      gapsTrackEl.value = prevGaps;
+    } else {
+      gapsTrackEl.value = 'video:0';
+    }
+
+    log('info', 'Pistes rafraichies (' + vCount + 'V / ' + aCount + 'A).');
+  }
+
+  // ------------------------------------------------------------------
+  // B-Roll generation
+  // ------------------------------------------------------------------
+  async function generate() {
+    const params = {
+      duration:    parseFloat(durationEl.value),
+      position:    positionEl.value,
+      srcTrackIdx: parseInt(srcTrackEl.value, 10),
+      dstTrackIdx: parseInt(dstTrackEl.value, 10),
+      random:      optRandom.checked,
+      zoom:        optZoom.checked,
+      marker:      optMarker.checked
+    };
+
+    if (!params.duration || params.duration <= 0) {
+      log('err', 'Duree invalide.');
+      return;
+    }
+    if (isNaN(params.srcTrackIdx) || isNaN(params.dstTrackIdx)) {
+      log('err', 'Pistes source/destination invalides.');
+      return;
+    }
+    if (params.srcTrackIdx === params.dstTrackIdx) {
+      log('err', 'Les pistes source et destination doivent etre differentes.');
+      return;
+    }
+
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'Generation en cours...';
+    log('info', 'B-Roll: duree=' + params.duration + 's, position=' + params.position +
+        ', src=V' + (params.srcTrackIdx + 1) + ', dst=V' + (params.dstTrackIdx + 1) +
+        (params.random ? ', random' : '') +
+        (params.zoom ? ', zoom' : '') +
+        (params.marker ? ', marqueurs' : ''));
+
+    const payload = JSON.stringify(params);
+    const raw = await evalScript("generateBRoll('" + jsString(payload) + "')");
+
+    let result;
+    try { result = JSON.parse(raw); }
+    catch (e) {
+      log('err', 'Reponse invalide du host: ' + raw);
+      generateBtn.disabled = false;
+      generateBtn.textContent = 'Generer les extraits';
+      return;
+    }
+
+    if (result.error) {
+      log('err', result.error);
+    } else {
+      log('ok', 'Termine. ' + result.created + ' extrait(s) cree(s) sur V' + (result.dstTrackIdx + 1) +
+          '. Ignores: ' + (result.skipped || 0) + '.');
+      if (result.warnings && result.warnings.length) {
+        for (let i = 0; i < result.warnings.length; i++) {
+          log('warn', result.warnings[i]);
+        }
+      }
+    }
+
+    generateBtn.disabled = false;
+    generateBtn.textContent = 'Generer les extraits';
+    await refreshTracks();
+  }
+
+  // ------------------------------------------------------------------
+  // Gap removal
+  // ------------------------------------------------------------------
+  async function removeGaps() {
+    const sel = gapsTrackEl.value || 'video:0';
+    const [type, idxStr] = sel.split(':');
+    const idx = parseInt(idxStr, 10);
+
+    if (isNaN(idx) || (type !== 'video' && type !== 'audio')) {
+      log('err', 'Selection de piste invalide.');
+      return;
+    }
+
+    const params = { trackType: type, trackIdx: idx };
+    gapsBtn.disabled = true;
+    gapsBtn.textContent = 'Compactage en cours...';
+    log('info', 'Compactage: ' + (type === 'video' ? 'V' : 'A') + (idx + 1));
+
+    const payload = JSON.stringify(params);
+    const raw = await evalScript("removeGaps('" + jsString(payload) + "')");
+
+    let result;
+    try { result = JSON.parse(raw); }
+    catch (e) {
+      log('err', 'Reponse invalide du host: ' + raw);
+      gapsBtn.disabled = false;
+      gapsBtn.textContent = 'Supprimer les trous';
+      return;
+    }
+
+    if (result.error) {
+      log('err', result.error);
+    } else {
+      log('ok', 'Termine. ' + (result.shifted || 0) + ' clip(s) deplace(s). ' +
+          'Total supprime: ' + (result.totalGapClosed || 0) + 's.');
+      if (result.warnings && result.warnings.length) {
+        for (let i = 0; i < result.warnings.length; i++) {
+          log('warn', result.warnings[i]);
+        }
+      }
+    }
+
+    gapsBtn.disabled = false;
+    gapsBtn.textContent = 'Supprimer les trous';
+  }
+
+  // ------------------------------------------------------------------
+  // Event wiring
+  // ------------------------------------------------------------------
+  refreshBtn.addEventListener('click', refreshTracks);
+  generateBtn.addEventListener('click', generate);
+  gapsBtn.addEventListener('click', removeGaps);
+  clearLogBtn.addEventListener('click', () => { logEl.innerHTML = ''; });
+
+  presetBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      durationEl.value = btn.getAttribute('data-val');
+      presetBtns.forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  durationEl.addEventListener('input', () => {
+    presetBtns.forEach((b) => b.classList.remove('active'));
+  });
+
+  // ------------------------------------------------------------------
+  // Initial load
+  // ------------------------------------------------------------------
+  log('info', 'Extension chargee. Choisis un onglet et clique sur le bouton de rafraichissement si besoin.');
+  setTimeout(refreshTracks, 300);
+})();
