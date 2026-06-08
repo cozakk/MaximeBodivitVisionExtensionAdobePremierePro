@@ -6,6 +6,38 @@ Dates au format AAAA-MM-JJ.
 
 ---
 
+## [1.3.0] — 2026-06-08
+
+### Ajouté
+
+- **Réglages persistants** : durée, position, pistes, options et onglet actif
+  mémorisés entre les sessions (localStorage).
+- **Compactage multi-pistes** : sélection par cases à cocher (toutes pistes
+  V + A) avec boutons « Tout » / « Aucune » ; tout est compacté en une seule
+  annulation. Côté host, `removeGaps` accepte une liste de pistes et factorise
+  `_compactTrack()`.
+- **B-Roll sur la sélection** : option pour ne traiter que les clips
+  sélectionnés dans la timeline (`_isSelected`).
+- **Prévisualisation (dry-run)** : bouton « Prévisualiser » qui liste les
+  extraits (nom, position, durée) sans rien modifier ni créer de piste
+  (mode `dryRun` côté host).
+- **Transitions automatiques** (expérimental) : fondu enchaîné en tête de
+  chaque extrait via le QE DOM, best-effort avec avertissements si indisponible.
+- **Annuler / Rétablir** : boutons d'en-tête (relayés à `app.undo()`/`redo()`
+  si disponibles, sinon rappel de Ctrl+Z — limitation Premiere par script).
+- **Diagnostic** : bouton d'auto-test en lecture seule (version, projet,
+  séquence, nb pistes, QE DOM, présence des API clés).
+- **Internationalisation FR/EN** : sélecteur de langue, libellés et infobulles
+  traduits, langue mémorisée.
+
+### Modifié / Interne
+
+- Refactor `generateBRoll` : extraction de `buildBRollParams` côté panneau,
+  mode `dryRun`, helpers `_isSelected` / `_addTransitions` côté host.
+- Version affichée dans le pied de page : `v1.2.0` → `v1.3.0`.
+
+---
+
 ## [1.2.0] — 2026-06-08
 
 ### Corrigé
