@@ -73,6 +73,78 @@
   }
 
   // ------------------------------------------------------------------
+  // Settings persistence (localStorage)
+  // ------------------------------------------------------------------
+  // Form controls whose value is remembered between sessions. Features
+  // that add new controls simply append their id here.
+  const PERSIST_IDS = [
+    'duration', 'position', 'src-track', 'dst-track',
+    'opt-random', 'opt-zoom', 'opt-marker', 'gaps-track'
+  ];
+  const LS_SETTINGS = 'visionext.settings';
+  const LS_PREFS    = 'visionext.prefs';
+
+  function _lsGet(key) {
+    try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; }
+  }
+  function _lsSet(key, obj) {
+    try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {}
+  }
+
+  function saveSettings() {
+    const data = {};
+    PERSIST_IDS.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      data[id] = (el.type === 'checkbox') ? el.checked : el.value;
+    });
+    _lsSet(LS_SETTINGS, data);
+  }
+
+  function restoreSettings() {
+    const data = _lsGet(LS_SETTINGS);
+    if (!data) return;
+    PERSIST_IDS.forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el || !(id in data)) return;
+      if (el.type === 'checkbox') {
+        el.checked = !!data[id];
+      } else if (el.tagName === 'SELECT') {
+        // Only apply if the option exists (track lists vary per sequence).
+        const v = String(data[id]).replace(/"/g, '\\"');
+        if (el.querySelector('option[value="' + v + '"]')) el.value = data[id];
+      } else {
+        el.value = data[id];
+      }
+    });
+  }
+
+  function savePref(key, value) {
+    const prefs = _lsGet(LS_PREFS) || {};
+    prefs[key] = value;
+    _lsSet(LS_PREFS, prefs);
+  }
+  function getPref(key, fallback) {
+    const prefs = _lsGet(LS_PREFS) || {};
+    return (key in prefs) ? prefs[key] : fallback;
+  }
+
+  // Save on any control change (programmatic .value sets don't fire these,
+  // so preset buttons call saveSettings() explicitly).
+  function wirePersistence() {
+    document.querySelectorAll('#app input, #app select').forEach((el) => {
+      el.addEventListener('change', saveSettings);
+      el.addEventListener('input', saveSettings);
+    });
+  }
+
+  function restoreTab() {
+    const tab = getPref('tab', 'broll');
+    const btn = document.querySelector('.tab[data-tab="' + tab + '"]');
+    if (btn) btn.click();
+  }
+
+  // ------------------------------------------------------------------
   // Tab switching
   // ------------------------------------------------------------------
   tabBtns.forEach((btn) => {
@@ -80,6 +152,7 @@
       const tab = btn.getAttribute('data-tab');
       tabBtns.forEach((b) => b.classList.toggle('active', b === btn));
       tabPanels.forEach((p) => p.classList.toggle('hidden', p.id !== 'tab-' + tab));
+      savePref('tab', tab);
     });
   });
 
@@ -157,6 +230,8 @@
       gapsTrackEl.value = 'video:0';
     }
 
+    // Re-apply persisted selections now that the track options exist.
+    restoreSettings();
     log('info', 'Pistes rafraichies (' + vCount + 'V / ' + aCount + 'A).');
   }
 
@@ -283,6 +358,7 @@
       durationEl.value = btn.getAttribute('data-val');
       presetBtns.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
+      saveSettings();
     });
   });
 
@@ -293,6 +369,9 @@
   // ------------------------------------------------------------------
   // Initial load
   // ------------------------------------------------------------------
+  restoreTab();
+  restoreSettings();
+  wirePersistence();
   log('info', 'Extension chargee. Choisis un onglet et clique sur le bouton de rafraichissement si besoin.');
   setTimeout(refreshTracks, 300);
 })();
