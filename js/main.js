@@ -29,6 +29,7 @@
   const positionEl  = document.getElementById('position');
   const srcTrackEl  = document.getElementById('src-track');
   const dstTrackEl  = document.getElementById('dst-track');
+  const optSelected = document.getElementById('opt-selected');
   const optRandom   = document.getElementById('opt-random');
   const optZoom     = document.getElementById('opt-zoom');
   const optMarker   = document.getElementById('opt-marker');
@@ -81,7 +82,7 @@
   // that add new controls simply append their id here.
   const PERSIST_IDS = [
     'duration', 'position', 'src-track', 'dst-track',
-    'opt-random', 'opt-zoom', 'opt-marker'
+    'opt-selected', 'opt-random', 'opt-zoom', 'opt-marker'
   ];
   const LS_SETTINGS = 'visionext.settings';
   const LS_PREFS    = 'visionext.prefs';
@@ -229,7 +230,8 @@
       dstTrackIdx: parseInt(dstTrackEl.value, 10),
       random:      optRandom.checked,
       zoom:        optZoom.checked,
-      marker:      optMarker.checked
+      marker:      optMarker.checked,
+      onlySelected: optSelected.checked
     };
 
     if (!params.duration || params.duration <= 0) {
@@ -249,6 +251,7 @@
     generateBtn.textContent = 'Generation en cours...';
     log('info', 'B-Roll: duree=' + params.duration + 's, position=' + params.position +
         ', src=V' + (params.srcTrackIdx + 1) + ', dst=V' + (params.dstTrackIdx + 1) +
+        (params.onlySelected ? ', selection' : '') +
         (params.random ? ', random' : '') +
         (params.zoom ? ', zoom' : '') +
         (params.marker ? ', marqueurs' : ''));

@@ -231,6 +231,18 @@ function _setProjItemIO(projItem, inSec, outSec, warnings, label) {
 }
 
 /**
+ * Whether a track item is currently selected in the timeline. Tolerant to
+ * the isSelected() method vs a `selected` property across versions.
+ */
+function _isSelected(trackItem) {
+    try {
+        if (typeof trackItem.isSelected === 'function') return !!trackItem.isSelected();
+        if (typeof trackItem.selected !== 'undefined') return !!trackItem.selected;
+    } catch (e) {}
+    return false;
+}
+
+/**
  * Iterate every item linked to `trackItem` (its companion audio items
  * when a clip has both video and audio). Handles both array-like and
  * collection-like return values across Premiere versions.
@@ -356,6 +368,18 @@ function generateBRoll(jsonStr) {
         var srcClips = _snapshotClips(srcTrack);
         if (srcClips.length === 0) {
             return JSON.stringify({ error: 'La piste V' + (p.srcTrackIdx + 1) + ' est vide.' });
+        }
+
+        // ----- Optional: restrict to the clips selected in the timeline -----
+        if (p.onlySelected) {
+            var sel = [];
+            for (var s = 0; s < srcClips.length; s++) {
+                if (_isSelected(srcClips[s].ref)) sel.push(srcClips[s]);
+            }
+            srcClips = sel;
+            if (srcClips.length === 0) {
+                return JSON.stringify({ error: 'Aucun clip selectionne sur la piste source V' + (p.srcTrackIdx + 1) + '.' });
+            }
         }
 
         // ----- Ensure destination track exists -----
