@@ -6,6 +6,22 @@ Dates au format AAAA-MM-JJ.
 
 ---
 
+## [1.3.4] — 2026-06-09
+
+### Ajouté
+
+- **Infos séquence** : la barre d'info affiche le nombre total de clips et la
+  durée du contenu (`getSequenceTrackInfo` renvoie les comptes par piste).
+- **Barre de progression** indéterminée pendant la génération, la
+  prévisualisation et le compactage.
+- **Confirmation** avant une opération touchant beaucoup de clips (seuil 25),
+  basée sur les comptes de clips par piste.
+- **Annuler la dernière génération** : un bouton retire les extraits créés par
+  la dernière génération B-Roll (`removeBRollClips`, best-effort DOM/QE).
+- **Export du journal** dans un fichier `visionext-journal.txt`.
+
+---
+
 ## [1.3.3] — 2026-06-09
 
 ### Ajouté

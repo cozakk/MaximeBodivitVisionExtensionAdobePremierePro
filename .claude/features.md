@@ -34,6 +34,11 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [x] Thème clair / sombre (sélecteur dans le pied de page, mémorisé) — v1.3.2
 - [x] Profils / presets de réglages nommés (enregistrer, charger, supprimer) — v1.3.3
 - [x] Export / import des réglages (fichier .json) — v1.3.3
+- [x] Affichage du nombre de clips et de la durée de la séquence — v1.3.4
+- [x] Barre de progression (indéterminée) pendant les opérations longues — v1.3.4
+- [x] Confirmation avant une opération touchant beaucoup de clips — v1.3.4
+- [x] Bouton « Annuler la dernière génération » (retire les extraits, best-effort) — v1.3.4
+- [x] Export du journal dans un fichier texte — v1.3.4
 
 ## Onglet B-Roll
 
@@ -102,13 +107,6 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [ ] Aperçu (dry-run) listant les trous avant suppression
 - [ ] Fermer aussi le trou de tête commun en gardant la synchro inter-pistes
 - [ ] Détecter et supprimer les clips vides / silences
-
-### Interface & confort
-- [ ] Bouton « Annuler la dernière génération » (retire les extraits créés)
-- [ ] Barre de progression pour les opérations longues
-- [ ] Confirmation avant une opération qui modifie beaucoup de clips
-- [ ] Affichage durée totale / nombre de clips de la séquence
-- [ ] Export du journal dans un fichier texte
 
 ### Audio
 - [ ] Compactage audio indépendant de la vidéo (délier avant)
