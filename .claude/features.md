@@ -31,6 +31,7 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [x] Internationalisation FR/EN de l'interface (sélecteur de langue) — v1.3.0
 - [x] Boutons Annuler / Rétablir dans le panneau (best-effort — voir notes) — v1.3.0
 - [x] Bouton Diagnostic / auto-test de l'hôte — v1.3.0
+- [x] Thème clair / sombre (sélecteur dans le pied de page, mémorisé) — v1.3.2
 
 ## Onglet B-Roll
 
@@ -108,7 +109,6 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [ ] Confirmation avant une opération qui modifie beaucoup de clips
 - [ ] Affichage durée totale / nombre de clips de la séquence
 - [ ] Export du journal dans un fichier texte
-- [ ] Thème clair en plus du thème sombre
 
 ### Audio
 - [ ] Compactage audio indépendant de la vidéo (délier avant)

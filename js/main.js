@@ -25,6 +25,7 @@
   const clearLogBtn = document.getElementById('clear-log');
   const diagBtn     = document.getElementById('diag-btn');
   const langSelect  = document.getElementById('lang-select');
+  const themeBtn    = document.getElementById('theme-btn');
   const tabBtns     = document.querySelectorAll('.tab');
   const tabPanels   = document.querySelectorAll('.tab-content');
 
@@ -187,6 +188,7 @@
       'tip.undo': 'Annuler (Ctrl+Z)',
       'tip.redo': 'Retablir (Ctrl+Maj+Z)',
       'tip.refresh': 'Recharger les pistes de la sequence active',
+      'tip.theme': 'Theme clair / sombre',
       'busy.generating': 'Generation en cours...',
       'busy.preview': 'Calcul...',
       'busy.compacting': 'Compactage en cours...'
@@ -221,6 +223,7 @@
       'tip.undo': 'Undo (Ctrl+Z)',
       'tip.redo': 'Redo (Ctrl+Shift+Z)',
       'tip.refresh': 'Reload the active sequence tracks',
+      'tip.theme': 'Light / dark theme',
       'busy.generating': 'Generating...',
       'busy.preview': 'Computing...',
       'busy.compacting': 'Compacting...'
@@ -244,6 +247,22 @@
     savePref('lang', LANG);
     applyI18n();
   }
+
+  // ------------------------------------------------------------------
+  // Theme (dark / light)
+  // ------------------------------------------------------------------
+  let THEME = 'dark';
+  function applyTheme(theme) {
+    THEME = (theme === 'light') ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', THEME);
+    // Show the icon of the theme you would switch TO.
+    if (themeBtn) themeBtn.innerHTML = (THEME === 'dark') ? '☀' : '☽';
+  }
+  function setTheme(theme) {
+    applyTheme(theme);
+    savePref('theme', THEME);
+  }
+  function toggleTheme() { setTheme(THEME === 'dark' ? 'light' : 'dark'); }
 
   // ------------------------------------------------------------------
   // Tab switching
@@ -589,6 +608,8 @@
   // ------------------------------------------------------------------
   // Initial load
   // ------------------------------------------------------------------
+  applyTheme(getPref('theme', 'dark'));
+  if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
   LANG = getPref('lang', 'fr');
   if (langSelect) {
     langSelect.value = LANG;
