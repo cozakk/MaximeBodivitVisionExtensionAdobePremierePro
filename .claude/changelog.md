@@ -6,6 +6,26 @@ Dates au format AAAA-MM-JJ.
 
 ---
 
+## [1.3.3] — 2026-06-09
+
+### Ajouté
+
+- **Profils / presets de réglages nommés** : enregistrer le jeu de réglages
+  B-Roll courant sous un nom, le recharger ou le supprimer depuis une liste
+  déroulante (stockés dans localStorage).
+- **Export / import des réglages en `.json`** : bouton d'export (téléchargement
+  d'un fichier `visionext-reglages.json` contenant les réglages courants + tous
+  les profils) et bouton d'import (fusionne les profils, applique les réglages).
+
+### Modifié / Interne
+
+- Persistance refactorisée : `collectSettings()` / `_applySettings()` partagés
+  entre la sauvegarde auto, les profils et l'import/export.
+- `applyI18n` gère désormais les placeholders (`data-i18n-ph`).
+- Version affichée : `v1.3.2` → `v1.3.3`.
+
+---
+
 ## [1.3.2] — 2026-06-09
 
 ### Ajouté
