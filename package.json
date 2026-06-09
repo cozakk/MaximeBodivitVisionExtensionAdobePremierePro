@@ -1,0 +1,9 @@
+{
+  "name": "com.maximebodivit.visionext",
+  "version": "1.4.0",
+  "private": true,
+  "description": "Extension CEP Premiere Pro : B-Roll, compactage, batch.",
+  "scripts": {
+    "test": "node test/check.mjs"
+  }
+}
