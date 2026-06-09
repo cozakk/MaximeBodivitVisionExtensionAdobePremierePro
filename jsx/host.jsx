@@ -162,6 +162,22 @@ function _setColorLabel(trackItem, idx) {
 }
 
 /**
+ * Best-effort: copy the source clip's timeline name/label onto a track item.
+ * trackItem.name is read-only on some Premiere versions, so we assign then
+ * read it back, warning (without failing) if the rename didn't take.
+ */
+function _setClipName(trackItem, name, warnings, label) {
+    if (!name) return false;
+    try { trackItem.name = name; } catch (e) {}
+    var ok = false;
+    try { ok = (String(trackItem.name) === String(name)); } catch (e) {}
+    if (!ok && warnings) {
+        warnings.push('Libelle non conserve (' + label + ') : renommage non supporte par cette version.');
+    }
+    return ok;
+}
+
+/**
  * Set a projectItem's source in/out points to [inSec, outSec] (source-media
  * seconds) BEFORE it gets inserted. overwriteClip/insertClip only lay down a
  * projectItem's current in/out range, so this is what makes the resulting
@@ -612,10 +628,12 @@ function generateBRoll(jsonStr) {
                 continue;
             }
 
-            // ----- Mirror the source color onto the new clip + linked audio -----
+            // ----- Mirror the source color + name onto the new clip -----
             // overwriteClip placed audio companions when the projectItem had
-            // audio; they already share the pre-trimmed in/out window.
+            // audio; they already share the pre-trimmed in/out window. We keep
+            // the source clip's color label AND its timeline name/label.
             _setColorLabel(newClip, srcColor);
+            _setClipName(newClip, src.name, warnings, src.name);
             _forEachLinked(newClip, function (linked) {
                 _setColorLabel(linked, srcColor);
             });

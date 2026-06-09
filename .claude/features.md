@@ -47,6 +47,7 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [x] Option : zoom léger (scale 110% sur l'effet Motion/Trajectoire)
 - [x] Option : ajout d'un marqueur sur chaque extrait
 - [x] Report de l'étiquette **couleur** du clip source sur l'extrait — ⚠️ invariant à conserver
+- [x] Report du **libellé / nom** du clip source sur l'extrait (best-effort) — ⚠️ invariant à conserver — v1.3.1
 - [x] Application du trim aux pistes audio liées (linked items)
 - [x] Validation : pistes source ≠ destination
 - [x] Compte-rendu : nb créés / ignorés / warnings
@@ -80,7 +81,6 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 > implémenté, ou déplacer vers les sections du haut.
 
 ### B-Roll
-- [ ] Conserver le **libellé / nom** du clip source sur l'extrait (la couleur est déjà reportée ; libellé à ajouter) — ⚠️ couleur + libellé sont des invariants à ne jamais perdre
 - [ ] Espacement régulier des extraits sur la timeline (au lieu de garder leur position d'origine)
 - [ ] Durée aléatoire entre un min et un max (au lieu d'une durée fixe)
 - [ ] Échantillonnage : ne traiter qu'un clip sur N
