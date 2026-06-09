@@ -6,6 +6,17 @@ Dates au format AAAA-MM-JJ.
 
 ---
 
+## [1.3.2] — 2026-06-09
+
+### Ajouté
+
+- **Thème clair en plus du thème sombre.** Le CSS passe par des variables et
+  deux jeux de couleurs (`:root` / `[data-theme="dark"]` et `[data-theme="light"]`).
+  Un bouton ☀/☽ dans le pied de page bascule le thème ; le choix est mémorisé
+  (localStorage) et restauré au démarrage.
+
+---
+
 ## [1.3.1] — 2026-06-09
 
 ### Ajouté
