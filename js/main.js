@@ -25,6 +25,7 @@
   const logEl       = document.getElementById('log');
   const clearLogBtn = document.getElementById('clear-log');
   const diagBtn     = document.getElementById('diag-btn');
+  const logExportBtn = document.getElementById('log-export');
   const langSelect  = document.getElementById('lang-select');
   const themeBtn    = document.getElementById('theme-btn');
   const tabBtns     = document.querySelectorAll('.tab');
@@ -226,6 +227,7 @@
       'log.title': 'Journal',
       'log.diag': 'Diagnostic',
       'log.clear': 'Effacer',
+      'log.export': 'Exporter',
       'tip.undo': 'Annuler (Ctrl+Z)',
       'tip.redo': 'Retablir (Ctrl+Maj+Z)',
       'tip.refresh': 'Recharger les pistes de la sequence active',
@@ -270,6 +272,7 @@
       'log.title': 'Log',
       'log.diag': 'Diagnostic',
       'log.clear': 'Clear',
+      'log.export': 'Export',
       'tip.undo': 'Undo (Ctrl+Z)',
       'tip.redo': 'Redo (Ctrl+Shift+Z)',
       'tip.refresh': 'Reload the active sequence tracks',
@@ -438,6 +441,28 @@
         didSomething ? 'Reglages importes.' : 'Aucun reglage reconnu dans le fichier.');
     };
     reader.readAsText(f);
+  }
+
+  // ------------------------------------------------------------------
+  // Export the journal to a .txt file
+  // ------------------------------------------------------------------
+  function exportLog() {
+    const lines = Array.prototype.slice.call(logEl.querySelectorAll('.log-line')).map((d) => d.textContent);
+    if (!lines.length) { log('warn', 'Journal vide.'); return; }
+    try {
+      const blob = new Blob([lines.join('\r\n')], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'visionext-journal.txt';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      log('ok', 'Journal exporte (visionext-journal.txt).');
+    } catch (e) {
+      log('err', 'Export du journal impossible : ' + e.message);
+    }
   }
 
   // ------------------------------------------------------------------
@@ -838,6 +863,7 @@
   gapsAllBtn.addEventListener('click', () => setAllGaps(true));
   gapsNoneBtn.addEventListener('click', () => setAllGaps(false));
   clearLogBtn.addEventListener('click', () => { logEl.innerHTML = ''; });
+  if (logExportBtn) logExportBtn.addEventListener('click', exportLog);
   presetLoadBtn.addEventListener('click', loadPreset);
   presetSaveBtn.addEventListener('click', savePreset);
   presetDelBtn.addEventListener('click', deletePreset);
