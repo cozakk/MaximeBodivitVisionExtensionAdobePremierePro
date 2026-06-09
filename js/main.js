@@ -87,6 +87,12 @@
     finally { hideProgress(); }
   }
 
+  // Ask for confirmation before an operation that touches many clips.
+  const CONFIRM_THRESHOLD = 25;
+  function askConfirm(msg) {
+    try { return window.confirm(msg); } catch (e) { return true; }
+  }
+
   function jsString(s) {
     return String(s)
       .replace(/\\/g, '\\\\')
@@ -547,6 +553,14 @@
     const params = buildBRollParams();
     if (!params) return;
 
+    const srcCount = (seqInfo && seqInfo.videoClips) ? (seqInfo.videoClips[params.srcTrackIdx] || 0) : 0;
+    if (!params.onlySelected && srcCount > CONFIRM_THRESHOLD) {
+      if (!askConfirm('Cette generation peut traiter jusqu\'a ' + srcCount + ' clips de la piste V' + (params.srcTrackIdx + 1) + '. Continuer ?')) {
+        log('info', 'Generation annulee.');
+        return;
+      }
+    }
+
     generateBtn.disabled = true;
     generateBtn.textContent = t('busy.generating');
     log('info', 'B-Roll: duree=' + params.duration + 's, position=' + params.position +
@@ -687,6 +701,20 @@
       const parts = k.split(':');
       return { trackType: parts[0], trackIdx: parseInt(parts[1], 10) };
     });
+
+    let affected = 0;
+    if (seqInfo) {
+      tracks.forEach((tk) => {
+        const arr = (tk.trackType === 'audio') ? seqInfo.audioClips : seqInfo.videoClips;
+        if (arr && typeof arr[tk.trackIdx] === 'number') affected += arr[tk.trackIdx];
+      });
+    }
+    if (affected > CONFIRM_THRESHOLD) {
+      if (!askConfirm('Le compactage va traiter environ ' + affected + ' clips. Continuer ?')) {
+        log('info', 'Compactage annule.');
+        return;
+      }
+    }
 
     gapsBtn.disabled = true;
     gapsBtn.textContent = t('busy.compacting');
