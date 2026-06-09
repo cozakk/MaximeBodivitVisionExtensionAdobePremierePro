@@ -32,6 +32,8 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [x] Boutons Annuler / Rétablir dans le panneau (best-effort — voir notes) — v1.3.0
 - [x] Bouton Diagnostic / auto-test de l'hôte — v1.3.0
 - [x] Thème clair / sombre (sélecteur dans le pied de page, mémorisé) — v1.3.2
+- [x] Profils / presets de réglages nommés (enregistrer, charger, supprimer) — v1.3.3
+- [x] Export / import des réglages (fichier .json) — v1.3.3
 
 ## Onglet B-Roll
 
@@ -102,8 +104,6 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [ ] Détecter et supprimer les clips vides / silences
 
 ### Interface & confort
-- [ ] Profils / presets de réglages nommés (sauvegarder, charger)
-- [ ] Export / import des réglages (fichier .json)
 - [ ] Bouton « Annuler la dernière génération » (retire les extraits créés)
 - [ ] Barre de progression pour les opérations longues
 - [ ] Confirmation avant une opération qui modifie beaucoup de clips

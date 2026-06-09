@@ -191,6 +191,7 @@ main {
 }
 
 input[type="number"],
+input[type="text"],
 select {
   background: var(--bg-input);
   border: 1px solid var(--border);
@@ -207,6 +208,7 @@ select {
 input[type="number"] { max-width: 80px; flex: 0 0 80px; }
 
 input[type="number"]:focus,
+input[type="text"]:focus,
 select:focus {
   border-color: var(--accent-hover);
 }

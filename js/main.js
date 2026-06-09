@@ -43,6 +43,16 @@
   const previewBtn  = document.getElementById('preview-btn');
   const presetBtns  = document.querySelectorAll('.preset');
 
+  // Settings profiles / import-export
+  const presetSelect   = document.getElementById('preset-select');
+  const presetNameEl   = document.getElementById('preset-name');
+  const presetLoadBtn  = document.getElementById('preset-load');
+  const presetSaveBtn  = document.getElementById('preset-save');
+  const presetDelBtn   = document.getElementById('preset-delete');
+  const exportBtn      = document.getElementById('settings-export');
+  const importBtn      = document.getElementById('settings-import');
+  const settingsFileEl = document.getElementById('settings-file');
+
   // Gaps tab
   const gapsTracksEl = document.getElementById('gaps-tracks');
   const gapsAllBtn   = document.getElementById('gaps-all');
@@ -101,18 +111,21 @@
     try { localStorage.setItem(key, JSON.stringify(obj)); } catch (e) {}
   }
 
-  function saveSettings() {
+  const LS_PRESETS  = 'visionext.presets';
+
+  // Snapshot the persistent controls into a plain object.
+  function collectSettings() {
     const data = {};
     PERSIST_IDS.forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
       data[id] = (el.type === 'checkbox') ? el.checked : el.value;
     });
-    _lsSet(LS_SETTINGS, data);
+    return data;
   }
 
-  function restoreSettings() {
-    const data = _lsGet(LS_SETTINGS);
+  // Apply a settings object onto the controls (does not persist by itself).
+  function _applySettings(data) {
     if (!data) return;
     PERSIST_IDS.forEach((id) => {
       const el = document.getElementById(id);
@@ -128,6 +141,9 @@
       }
     });
   }
+
+  function saveSettings() { _lsSet(LS_SETTINGS, collectSettings()); }
+  function restoreSettings() { _applySettings(_lsGet(LS_SETTINGS)); }
 
   function savePref(key, value) {
     const prefs = _lsGet(LS_PREFS) || {};
@@ -189,6 +205,14 @@
       'tip.redo': 'Retablir (Ctrl+Maj+Z)',
       'tip.refresh': 'Recharger les pistes de la sequence active',
       'tip.theme': 'Theme clair / sombre',
+      'presets.label': 'Profils de réglages',
+      'presets.none': '— Profils —',
+      'presets.load': 'Charger',
+      'presets.save': 'Enregistrer',
+      'presets.delete': 'Suppr.',
+      'presets.export': 'Exporter .json',
+      'presets.import': 'Importer .json',
+      'presets.name': 'Nom du profil',
       'busy.generating': 'Generation en cours...',
       'busy.preview': 'Calcul...',
       'busy.compacting': 'Compactage en cours...'
@@ -224,6 +248,14 @@
       'tip.redo': 'Redo (Ctrl+Shift+Z)',
       'tip.refresh': 'Reload the active sequence tracks',
       'tip.theme': 'Light / dark theme',
+      'presets.label': 'Settings profiles',
+      'presets.none': '— Profiles —',
+      'presets.load': 'Load',
+      'presets.save': 'Save',
+      'presets.delete': 'Delete',
+      'presets.export': 'Export .json',
+      'presets.import': 'Import .json',
+      'presets.name': 'Profile name',
       'busy.generating': 'Generating...',
       'busy.preview': 'Computing...',
       'busy.compacting': 'Compacting...'
@@ -240,12 +272,16 @@
     document.querySelectorAll('[data-i18n-title]').forEach((el) => {
       el.title = t(el.getAttribute('data-i18n-title'));
     });
+    document.querySelectorAll('[data-i18n-ph]').forEach((el) => {
+      el.placeholder = t(el.getAttribute('data-i18n-ph'));
+    });
     document.documentElement.lang = LANG;
   }
   function setLang(lang) {
     LANG = (lang === 'en') ? 'en' : 'fr';
     savePref('lang', LANG);
     applyI18n();
+    refreshPresetList(); // re-translate the "— Profils —" placeholder
   }
 
   // ------------------------------------------------------------------
@@ -263,6 +299,120 @@
     savePref('theme', THEME);
   }
   function toggleTheme() { setTheme(THEME === 'dark' ? 'light' : 'dark'); }
+
+  // ------------------------------------------------------------------
+  // Settings profiles (named presets) + import / export
+  // ------------------------------------------------------------------
+  function getPresets() { return _lsGet(LS_PRESETS) || {}; }
+  function setPresets(obj) { _lsSet(LS_PRESETS, obj); }
+
+  function refreshPresetList() {
+    if (!presetSelect) return;
+    const presets = getPresets();
+    const names = Object.keys(presets).sort();
+    const cur = presetSelect.value;
+    presetSelect.innerHTML = '';
+    const ph = document.createElement('option');
+    ph.value = '';
+    ph.textContent = t('presets.none');
+    presetSelect.appendChild(ph);
+    names.forEach((n) => {
+      const o = document.createElement('option');
+      o.value = n;
+      o.textContent = n;
+      presetSelect.appendChild(o);
+    });
+    if (names.indexOf(cur) !== -1) presetSelect.value = cur;
+  }
+
+  function savePreset() {
+    const name = (presetNameEl.value || '').trim();
+    if (!name) { log('warn', 'Donne un nom au profil avant d\'enregistrer.'); return; }
+    const presets = getPresets();
+    presets[name] = collectSettings();
+    setPresets(presets);
+    refreshPresetList();
+    presetSelect.value = name;
+    presetNameEl.value = '';
+    log('ok', 'Profil enregistre : "' + name + '".');
+  }
+
+  function loadPreset() {
+    const name = presetSelect.value;
+    if (!name) { log('warn', 'Choisis un profil dans la liste.'); return; }
+    const presets = getPresets();
+    if (!presets[name]) { log('err', 'Profil introuvable.'); refreshPresetList(); return; }
+    _applySettings(presets[name]);
+    saveSettings();
+    log('ok', 'Profil charge : "' + name + '".');
+  }
+
+  function deletePreset() {
+    const name = presetSelect.value;
+    if (!name) { log('warn', 'Choisis un profil a supprimer.'); return; }
+    const presets = getPresets();
+    delete presets[name];
+    setPresets(presets);
+    refreshPresetList();
+    log('ok', 'Profil supprime : "' + name + '".');
+  }
+
+  // Export current settings + all presets as a downloadable .json file.
+  function exportSettings() {
+    const payload = {
+      app: 'com.maximebodivit.visionext',
+      kind: 'settings',
+      settings: collectSettings(),
+      presets: getPresets()
+    };
+    try {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'visionext-reglages.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      log('ok', 'Reglages exportes (visionext-reglages.json).');
+    } catch (e) {
+      log('err', 'Export impossible : ' + e.message);
+    }
+  }
+
+  // Open the file picker; the change handler (wired below) does the import.
+  function importSettings() {
+    if (!settingsFileEl) return;
+    settingsFileEl.value = '';
+    settingsFileEl.click();
+  }
+
+  function handleSettingsFile() {
+    const f = settingsFileEl.files && settingsFileEl.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let data;
+      try { data = JSON.parse(reader.result); }
+      catch (e) { log('err', 'Import impossible : fichier JSON invalide.'); return; }
+
+      let didSomething = false;
+      if (data.settings && typeof data.settings === 'object') {
+        _applySettings(data.settings);
+        saveSettings();
+        didSomething = true;
+      }
+      if (data.presets && typeof data.presets === 'object') {
+        setPresets(Object.assign(getPresets(), data.presets));
+        refreshPresetList();
+        didSomething = true;
+      }
+      log(didSomething ? 'ok' : 'warn',
+        didSomething ? 'Reglages importes.' : 'Aucun reglage reconnu dans le fichier.');
+    };
+    reader.readAsText(f);
+  }
 
   // ------------------------------------------------------------------
   // Tab switching
@@ -591,6 +741,12 @@
   gapsAllBtn.addEventListener('click', () => setAllGaps(true));
   gapsNoneBtn.addEventListener('click', () => setAllGaps(false));
   clearLogBtn.addEventListener('click', () => { logEl.innerHTML = ''; });
+  presetLoadBtn.addEventListener('click', loadPreset);
+  presetSaveBtn.addEventListener('click', savePreset);
+  presetDelBtn.addEventListener('click', deletePreset);
+  exportBtn.addEventListener('click', exportSettings);
+  importBtn.addEventListener('click', importSettings);
+  if (settingsFileEl) settingsFileEl.addEventListener('change', handleSettingsFile);
 
   presetBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -620,6 +776,7 @@
   restoreTab();
   restoreSettings();
   wirePersistence();
+  refreshPresetList();
   log('info', 'Extension chargee. Choisis un onglet et clique sur le bouton de rafraichissement si besoin.');
   setTimeout(refreshTracks, 300);
 })();
