@@ -59,6 +59,9 @@
   const gapsNoneBtn  = document.getElementById('gaps-none');
   const gapsBtn      = document.getElementById('gaps-btn');
 
+  // Cached sequence info (clip counts per track, duration) from last refresh.
+  let seqInfo = null;
+
   // ------------------------------------------------------------------
   // ExtendScript bridge
   // ------------------------------------------------------------------
@@ -426,6 +429,14 @@
     });
   });
 
+  // Format seconds as mm:ss.
+  function fmtDuration(sec) {
+    sec = Math.max(0, Math.round(sec || 0));
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
   // ------------------------------------------------------------------
   // Track list refresh - populates B-Roll selects AND gaps select.
   // ------------------------------------------------------------------
@@ -446,7 +457,11 @@
 
     const vCount = info.videoTrackCount;
     const aCount = info.audioTrackCount;
-    seqNameEl.textContent = 'Sequence: ' + info.name + ' (' + vCount + 'V / ' + aCount + 'A)';
+    seqInfo = info;
+    let infoTxt = 'Sequence: ' + info.name + ' (' + vCount + 'V / ' + aCount + 'A)';
+    if (typeof info.totalClips === 'number') infoTxt += ' - ' + info.totalClips + ' clips';
+    if (typeof info.durationSec === 'number') infoTxt += ' - ' + fmtDuration(info.durationSec);
+    seqNameEl.textContent = infoTxt;
 
     // ----- B-Roll source dropdown : existing video tracks -----
     const prevSrc = parseInt(srcTrackEl.value, 10);

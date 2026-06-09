@@ -453,10 +453,43 @@ function getSequenceTrackInfo() {
         var seq = app.project.activeSequence;
         if (!seq) return JSON.stringify({ error: 'Aucune sequence active.' });
 
+        var vCount = seq.videoTracks.numTracks;
+        var aCount = seq.audioTracks.numTracks;
+        var videoClips = [];
+        var audioClips = [];
+        var total = 0;
+        var maxEnd = 0;
+        var i, c, n, track, endSec;
+
+        for (i = 0; i < vCount; i++) {
+            track = seq.videoTracks[i];
+            n = track.clips.numItems;
+            videoClips.push(n);
+            total += n;
+            for (c = 0; c < n; c++) {
+                endSec = track.clips[c].end.seconds;
+                if (endSec > maxEnd) maxEnd = endSec;
+            }
+        }
+        for (i = 0; i < aCount; i++) {
+            track = seq.audioTracks[i];
+            n = track.clips.numItems;
+            audioClips.push(n);
+            total += n;
+            for (c = 0; c < n; c++) {
+                endSec = track.clips[c].end.seconds;
+                if (endSec > maxEnd) maxEnd = endSec;
+            }
+        }
+
         return JSON.stringify({
             name: seq.name,
-            videoTrackCount: seq.videoTracks.numTracks,
-            audioTrackCount: seq.audioTracks.numTracks
+            videoTrackCount: vCount,
+            audioTrackCount: aCount,
+            videoClips: videoClips,
+            audioClips: audioClips,
+            totalClips: total,
+            durationSec: _r(maxEnd)
         });
     } catch (e) {
         return JSON.stringify({ error: 'Exception: ' + e.toString() });
