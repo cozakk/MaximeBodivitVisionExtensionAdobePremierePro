@@ -6,6 +6,18 @@ Dates au format AAAA-MM-JJ.
 
 ---
 
+## [1.3.1] — 2026-06-09
+
+### Ajouté
+
+- **Conservation du libellé / nom du clip source** sur l'extrait B-Roll
+  (`_setClipName`). Best-effort : `trackItem.name` étant en lecture seule sur
+  certaines versions de Premiere, le résultat est vérifié et un avertissement
+  est journalisé si le renommage n'est pas pris en compte. La couleur
+  d'étiquette était déjà reportée — couleur + libellé sont des invariants.
+
+---
+
 ## [1.3.0] — 2026-06-08
 
 ### Ajouté
