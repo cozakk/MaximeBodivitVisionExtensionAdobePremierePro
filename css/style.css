@@ -155,6 +155,24 @@ header h1 {
   border-bottom: 1px solid var(--border-strong);
 }
 
+/* ---------- Progress bar (indeterminate) ---------- */
+.progress {
+  height: 3px;
+  background: var(--border-soft);
+  overflow: hidden;
+}
+.progress.hidden { display: none; }
+.progress-bar {
+  height: 100%;
+  width: 40%;
+  background: var(--accent);
+  animation: vx-indeterminate 1.1s infinite ease-in-out;
+}
+@keyframes vx-indeterminate {
+  0%   { margin-left: -40%; }
+  100% { margin-left: 100%; }
+}
+
 /* ---------- Main scroll area ---------- */
 main {
   flex: 1;

@@ -18,6 +18,7 @@
   // ------------------------------------------------------------------
   // Common
   const seqNameEl   = document.getElementById('seq-name');
+  const progressEl  = document.getElementById('progress');
   const refreshBtn  = document.getElementById('refresh-btn');
   const undoBtn     = document.getElementById('undo-btn');
   const redoBtn     = document.getElementById('redo-btn');
@@ -73,6 +74,17 @@
         resolve(JSON.stringify({ error: 'CEP bridge unavailable' }));
       }
     });
+  }
+
+  function showProgress() { if (progressEl) progressEl.classList.remove('hidden'); }
+  function hideProgress() { if (progressEl) progressEl.classList.add('hidden'); }
+
+  // evalScript variant that shows the indeterminate progress bar while the
+  // host call is running (for the longer operations).
+  async function evalScriptP(script) {
+    showProgress();
+    try { return await evalScript(script); }
+    finally { hideProgress(); }
   }
 
   function jsString(s) {
@@ -546,7 +558,7 @@
         (params.transition ? ', transitions' : ''));
 
     const payload = JSON.stringify(params);
-    const raw = await evalScript("generateBRoll('" + jsString(payload) + "')");
+    const raw = await evalScriptP("generateBRoll('" + jsString(payload) + "')");
 
     let result;
     try { result = JSON.parse(raw); }
@@ -588,7 +600,7 @@
     log('info', 'Previsualisation B-Roll (aucune modification de la timeline)...');
 
     const payload = JSON.stringify(params);
-    const raw = await evalScript("generateBRoll('" + jsString(payload) + "')");
+    const raw = await evalScriptP("generateBRoll('" + jsString(payload) + "')");
 
     let result;
     try { result = JSON.parse(raw); }
@@ -681,7 +693,7 @@
     log('info', 'Compactage de ' + tracks.length + ' piste(s): ' + keys.map(prettyTrack).join(', '));
 
     const payload = JSON.stringify({ tracks: tracks });
-    const raw = await evalScript("removeGaps('" + jsString(payload) + "')");
+    const raw = await evalScriptP("removeGaps('" + jsString(payload) + "')");
 
     let result;
     try { result = JSON.parse(raw); }
