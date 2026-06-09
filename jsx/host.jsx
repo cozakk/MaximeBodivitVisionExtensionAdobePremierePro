@@ -584,6 +584,7 @@ function generateBRoll(jsonStr) {
         var created = 0;
         var skipped = 0;
         var preview = [];
+        var createdStarts = [];
         var requested = p.duration;
 
         for (var i = 0; i < srcClips.length; i++) {
@@ -686,6 +687,7 @@ function generateBRoll(jsonStr) {
             }
 
             created++;
+            createdStarts.push(_r(destStart));
         }
 
         // ----- Optional cross-dissolve transitions on the new extracts -----
@@ -715,6 +717,7 @@ function generateBRoll(jsonStr) {
             skipped: skipped,
             dstTrackIdx: dstIdx,
             transitions: transitionsAdded,
+            starts: createdStarts,
             warnings: warnings
         });
 
@@ -861,4 +864,80 @@ function removeGaps(jsonStr) {
         try { app.project.closeUndoGroup && app.project.closeUndoGroup(); } catch (e) {}
         return JSON.stringify({ error: 'Exception: ' + err.toString(), warnings: warnings });
     }
+}
+
+/**
+ * Remove the B-Roll extracts created by the last generation, identified by
+ * their start times on the destination video track.
+ *
+ * @param {string} jsonStr JSON: { dstIdx: int, starts: [seconds, ...] }
+ */
+function removeBRollClips(jsonStr) {
+    var warnings = [];
+    try {
+        var p = JSON.parse(jsonStr);
+        var dstIdx = p.dstIdx;
+        var starts = p.starts || [];
+
+        if (!app.project) return JSON.stringify({ error: 'Aucun projet ouvert.' });
+        var seq = app.project.activeSequence;
+        if (!seq) return JSON.stringify({ error: 'Aucune sequence active.' });
+        if (!starts.length) return JSON.stringify({ ok: true, removed: 0, warnings: ['Rien a annuler.'] });
+        if (dstIdx < 0 || dstIdx >= seq.videoTracks.numTracks) {
+            return JSON.stringify({ error: 'Piste destination V' + (dstIdx + 1) + ' invalide.' });
+        }
+
+        try { app.project.openUndoGroup && app.project.openUndoGroup('Annuler la generation B-Roll'); } catch (e) {}
+
+        var removed = 0;
+        var tol = 0.06;
+        for (var s = 0; s < starts.length; s++) {
+            if (_removeVideoClipAt(seq, dstIdx, starts[s], tol, warnings)) removed++;
+        }
+
+        try { app.project.closeUndoGroup && app.project.closeUndoGroup(); } catch (e) {}
+        return JSON.stringify({ ok: true, removed: removed, warnings: warnings });
+    } catch (err) {
+        try { app.project.closeUndoGroup && app.project.closeUndoGroup(); } catch (e) {}
+        return JSON.stringify({ error: 'Exception: ' + err.toString(), warnings: warnings });
+    }
+}
+
+/**
+ * Remove the clip at startSec on video track dstIdx. Best-effort: standard
+ * TrackItem.remove() then QE DOM. Re-finds the clip live each call so index
+ * shifts after a removal don't matter. Returns true if a clip was removed.
+ */
+function _removeVideoClipAt(seq, dstIdx, startSec, tol, warnings) {
+    var dstTrack = seq.videoTracks[dstIdx];
+    var clip = _findClipAt(dstTrack, startSec, tol);
+    if (!clip) { warnings.push('Extrait introuvable a t=' + _r(startSec) + 's (deja supprime ?).'); return false; }
+
+    // 1) Standard DOM
+    try {
+        if (typeof clip.remove === 'function') { clip.remove(false, false); return true; }
+    } catch (e) { warnings.push('remove() a echoue (t=' + _r(startSec) + 's): ' + e.toString()); }
+
+    // 2) QE DOM fallback
+    try {
+        app.enableQE();
+        var qeSeq = (typeof qe !== 'undefined' && qe.project) ? qe.project.getActiveSequence() : null;
+        if (qeSeq) {
+            var qeTrack = qeSeq.getVideoTrackAt(dstIdx);
+            if (qeTrack) {
+                for (var i = 0; i < qeTrack.numItems; i++) {
+                    var qc = qeTrack.getItemAt(i);
+                    if (!qc) continue;
+                    var qs = null;
+                    try { qs = qc.start.seconds; } catch (e3) {}
+                    if (qs !== null && !isNaN(qs) && Math.abs(qs - startSec) < tol) {
+                        try { qc.remove(false, false); return true; } catch (e2) {}
+                    }
+                }
+            }
+        }
+    } catch (e) {}
+
+    warnings.push('Suppression impossible a t=' + _r(startSec) + 's (API remove indisponible).');
+    return false;
 }

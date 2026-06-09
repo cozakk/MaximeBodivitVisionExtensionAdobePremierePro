@@ -345,6 +345,8 @@ button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-row .primary { margin-top: 0; flex: 1; }
 .btn-row .secondary { flex: 1; }
 
+#undo-gen-btn { width: 100%; margin-top: 8px; }
+
 button.secondary {
   background: var(--bg-btn);
   border: 1px solid var(--border);

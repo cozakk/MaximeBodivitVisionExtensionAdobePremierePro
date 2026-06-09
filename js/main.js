@@ -42,6 +42,7 @@
   const optTransition = document.getElementById('opt-transition');
   const generateBtn = document.getElementById('generate-btn');
   const previewBtn  = document.getElementById('preview-btn');
+  const undoGenBtn  = document.getElementById('undo-gen-btn');
   const presetBtns  = document.querySelectorAll('.preset');
 
   // Settings profiles / import-export
@@ -62,6 +63,8 @@
 
   // Cached sequence info (clip counts per track, duration) from last refresh.
   let seqInfo = null;
+  // Last B-Roll generation, so it can be undone: { dstIdx, starts: [sec,...] }.
+  let lastGeneration = null;
 
   // ------------------------------------------------------------------
   // ExtendScript bridge
@@ -214,6 +217,7 @@
       'opt.transition': 'Ajouter des transitions (fondu enchaine, experimental)',
       'btn.preview': 'Previsualiser',
       'btn.generate': 'Generer les extraits',
+      'btn.undoGen': 'Annuler la dernière génération',
       'gaps.tracks': 'Pistes a compacter',
       'gaps.all': 'Tout',
       'gaps.none': 'Aucune',
@@ -257,6 +261,7 @@
       'opt.transition': 'Add transitions (cross dissolve, experimental)',
       'btn.preview': 'Preview',
       'btn.generate': 'Generate extracts',
+      'btn.undoGen': 'Undo last generation',
       'gaps.tracks': 'Tracks to compact',
       'gaps.all': 'All',
       'gaps.none': 'None',
@@ -589,6 +594,10 @@
       log('ok', 'Termine. ' + result.created + ' extrait(s) cree(s) sur V' + (result.dstTrackIdx + 1) +
           '. Ignores: ' + (result.skipped || 0) + '.');
       if (result.transitions) log('info', result.transitions + ' transition(s) ajoutee(s).');
+      if (result.starts && result.starts.length) {
+        lastGeneration = { dstIdx: result.dstTrackIdx, starts: result.starts };
+        if (undoGenBtn) undoGenBtn.disabled = false;
+      }
       if (result.warnings && result.warnings.length) {
         for (let i = 0; i < result.warnings.length; i++) {
           log('warn', result.warnings[i]);
@@ -640,6 +649,38 @@
 
     previewBtn.disabled = false;
     previewBtn.textContent = t('btn.preview');
+  }
+
+  // ------------------------------------------------------------------
+  // Undo the last B-Roll generation (remove the extracts it created)
+  // ------------------------------------------------------------------
+  async function undoLastGeneration() {
+    if (!lastGeneration || !lastGeneration.starts || !lastGeneration.starts.length) {
+      log('warn', 'Aucune generation a annuler.');
+      return;
+    }
+    if (!askConfirm('Retirer les ' + lastGeneration.starts.length + ' extrait(s) de la derniere generation ?')) return;
+
+    undoGenBtn.disabled = true;
+    log('info', 'Annulation de la derniere generation...');
+    const payload = JSON.stringify(lastGeneration);
+    const raw = await evalScriptP("removeBRollClips('" + jsString(payload) + "')");
+
+    let r;
+    try { r = JSON.parse(raw); }
+    catch (e) { log('err', 'Reponse invalide du host: ' + raw); undoGenBtn.disabled = false; return; }
+
+    if (r.error) {
+      log('err', r.error);
+      undoGenBtn.disabled = false;
+    } else {
+      log('ok', (r.removed || 0) + ' extrait(s) retire(s).');
+      if (r.warnings && r.warnings.length) {
+        for (let i = 0; i < r.warnings.length; i++) log('warn', r.warnings[i]);
+      }
+      lastGeneration = null;
+      await refreshTracks();
+    }
   }
 
   // ------------------------------------------------------------------
@@ -792,6 +833,7 @@
   diagBtn.addEventListener('click', diagnostic);
   generateBtn.addEventListener('click', generate);
   previewBtn.addEventListener('click', preview);
+  undoGenBtn.addEventListener('click', undoLastGeneration);
   gapsBtn.addEventListener('click', removeGaps);
   gapsAllBtn.addEventListener('click', () => setAllGaps(true));
   gapsNoneBtn.addEventListener('click', () => setAllGaps(false));
