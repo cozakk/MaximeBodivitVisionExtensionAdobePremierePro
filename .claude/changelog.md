@@ -6,6 +6,29 @@ Dates au format AAAA-MM-JJ.
 
 ---
 
+## [1.4.0] — 2026-06-09
+
+### Ajouté
+
+- **Journal traduit** : tous les messages du panneau passent par des clés de
+  traduction paramétrées (`t(key, {…})`). Les messages renvoyés par l'hôte
+  restent tels quels.
+- **Langues ES et DE** en plus de FR/EN (sélecteur étendu).
+- **Mode batch** (nouvel onglet) : applique le B-Roll ou le Compactage à
+  plusieurs séquences cochées en une fois (`getSequences` / `batchOperation`
+  côté hôte, qui active chaque séquence puis restaure l'active).
+- **Tests automatisés + CI** : `test/check.mjs` (syntaxe JS + cohérence des
+  tables i18n entre les 4 langues + clés UI), `package.json` (`npm test`) et un
+  workflow GitHub Actions.
+
+### Modifié / Interne
+
+- `t()` gère les placeholders `{x}` ; `applyI18n` couvre déjà titres et
+  placeholders.
+- Version affichée : `v1.3.4` → `v1.4.0`.
+
+---
+
 ## [1.3.4] — 2026-06-09
 
 ### Ajouté

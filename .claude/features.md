@@ -17,6 +17,7 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [x] Lecture des infos de séquence `getSequenceTrackInfo()` (nom, nb pistes V/A)
 - [x] Regroupement des opérations en un seul Undo (`openUndoGroup` / `closeUndoGroup`)
 - [x] Création automatique de pistes vidéo manquantes via QE DOM (`_ensureVideoTrack`)
+- [x] Tests automatisés (syntaxe JS + cohérence i18n) + workflow CI GitHub Actions — v1.4.0
 
 ## Interface (UI)
 
@@ -39,6 +40,8 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [x] Confirmation avant une opération touchant beaucoup de clips — v1.3.4
 - [x] Bouton « Annuler la dernière génération » (retire les extraits, best-effort) — v1.3.4
 - [x] Export du journal dans un fichier texte — v1.3.4
+- [x] Traduction des messages du journal (i18n paramétrée) — v1.4.0
+- [x] Langues supplémentaires : Espagnol et Allemand (FR/EN/ES/DE) — v1.4.0
 
 ## Onglet B-Roll
 
@@ -71,6 +74,12 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [x] Déplacement des items liés (audio/vidéo synchronisés)
 - [x] Compte-rendu : nb de clips déplacés + durée totale supprimée
 - [x] Compactage de plusieurs pistes en une seule action (cases à cocher + Tout/Aucune) — v1.3.0
+
+## Onglet Batch
+
+- [x] Application de B-Roll ou Compactage à plusieurs séquences en une fois — v1.4.0
+- [x] Liste des séquences du projet (cases à cocher + Tout/Aucune/Recharger) — v1.4.0
+- [x] Compte-rendu par séquence dans le journal — v1.4.0
 
 ## Notes sur certaines fonctions v1.3.0
 
@@ -112,9 +121,3 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [ ] Compactage audio indépendant de la vidéo (délier avant)
 - [ ] Normaliser / ajuster le gain des extraits
 - [ ] Détection de silences pour découpe automatique
-
-### Divers
-- [ ] Internationalisation : traduire aussi les messages du journal
-- [ ] Langues supplémentaires (ES, DE…)
-- [ ] Mode batch sur plusieurs séquences
-- [ ] Tests automatisés en CI (le bouton Diagnostic couvre un auto-test manuel)
