@@ -62,6 +62,14 @@
   const gapsNoneBtn  = document.getElementById('gaps-none');
   const gapsBtn      = document.getElementById('gaps-btn');
 
+  // Batch tab
+  const batchOpEl     = document.getElementById('batch-op');
+  const batchSeqsEl   = document.getElementById('batch-seqs');
+  const batchAllBtn   = document.getElementById('batch-all');
+  const batchNoneBtn  = document.getElementById('batch-none');
+  const batchReloadBtn = document.getElementById('batch-reload');
+  const batchRunBtn   = document.getElementById('batch-run');
+
   // Cached sequence info (clip counts per track, duration) from last refresh.
   let seqInfo = null;
   // Last B-Roll generation, so it can be undone: { dstIdx, starts: [sec,...] }.
@@ -292,7 +300,21 @@
       'diag.done': 'Diagnostic termine.',
       'undo.done': 'Annule.',
       'redo.done': 'Retabli.',
-      'op.unavailable': 'Operation non disponible.'
+      'op.unavailable': 'Operation non disponible.',
+      'tab.batch': 'Batch',
+      'batch.op': 'Operation a appliquer',
+      'batch.opBroll': "B-Roll (reglages de l'onglet B-Roll)",
+      'batch.opGaps': 'Compactage (pistes cochees)',
+      'batch.sequences': 'Sequences cibles',
+      'batch.reload': 'Recharger',
+      'batch.hint': "L'operation choisie est appliquee a chaque sequence cochee, avec les reglages de l'onglet correspondant.",
+      'batch.run': 'Lancer sur les sequences',
+      'batch.running': 'Traitement...',
+      'batch.noSeq': 'Aucune sequence cochee.',
+      'batch.noneFound': 'Aucune sequence dans le projet.',
+      'batch.confirm': "Appliquer l'operation a {n} sequence(s) ?",
+      'batch.start': 'Batch : {op} sur {n} sequence(s)...',
+      'batch.done': 'Batch termine ({n} sequence(s)).'
     },
     en: {
       'tab.gaps': 'Compacting',
@@ -386,7 +408,21 @@
       'diag.done': 'Diagnostic finished.',
       'undo.done': 'Undone.',
       'redo.done': 'Redone.',
-      'op.unavailable': 'Operation unavailable.'
+      'op.unavailable': 'Operation unavailable.',
+      'tab.batch': 'Batch',
+      'batch.op': 'Operation to apply',
+      'batch.opBroll': 'B-Roll (B-Roll tab settings)',
+      'batch.opGaps': 'Compacting (ticked tracks)',
+      'batch.sequences': 'Target sequences',
+      'batch.reload': 'Reload',
+      'batch.hint': 'The chosen operation is applied to each ticked sequence, using the matching tab settings.',
+      'batch.run': 'Run on the sequences',
+      'batch.running': 'Processing...',
+      'batch.noSeq': 'No sequence ticked.',
+      'batch.noneFound': 'No sequence in the project.',
+      'batch.confirm': 'Apply the operation to {n} sequence(s)?',
+      'batch.start': 'Batch: {op} on {n} sequence(s)...',
+      'batch.done': 'Batch finished ({n} sequence(s)).'
     },
     es: {
       'tab.gaps': 'Compactar',
@@ -480,7 +516,21 @@
       'diag.done': 'Diagnostico finalizado.',
       'undo.done': 'Deshecho.',
       'redo.done': 'Rehecho.',
-      'op.unavailable': 'Operacion no disponible.'
+      'op.unavailable': 'Operacion no disponible.',
+      'tab.batch': 'Lote',
+      'batch.op': 'Operacion a aplicar',
+      'batch.opBroll': 'B-Roll (ajustes de la pestana B-Roll)',
+      'batch.opGaps': 'Compactar (pistas marcadas)',
+      'batch.sequences': 'Secuencias objetivo',
+      'batch.reload': 'Recargar',
+      'batch.hint': 'La operacion elegida se aplica a cada secuencia marcada, con los ajustes de la pestana correspondiente.',
+      'batch.run': 'Ejecutar en las secuencias',
+      'batch.running': 'Procesando...',
+      'batch.noSeq': 'Ninguna secuencia marcada.',
+      'batch.noneFound': 'Ninguna secuencia en el proyecto.',
+      'batch.confirm': 'Aplicar la operacion a {n} secuencia(s)?',
+      'batch.start': 'Lote: {op} en {n} secuencia(s)...',
+      'batch.done': 'Lote finalizado ({n} secuencia(s)).'
     },
     de: {
       'tab.gaps': 'Verdichten',
@@ -574,7 +624,21 @@
       'diag.done': 'Diagnose abgeschlossen.',
       'undo.done': 'Ruckgangig gemacht.',
       'redo.done': 'Wiederholt.',
-      'op.unavailable': 'Vorgang nicht verfugbar.'
+      'op.unavailable': 'Vorgang nicht verfugbar.',
+      'tab.batch': 'Stapel',
+      'batch.op': 'Anzuwendende Operation',
+      'batch.opBroll': 'B-Roll (Einstellungen des B-Roll-Tabs)',
+      'batch.opGaps': 'Verdichten (angekreuzte Spuren)',
+      'batch.sequences': 'Zielsequenzen',
+      'batch.reload': 'Neu laden',
+      'batch.hint': 'Die gewahlte Operation wird auf jede angekreuzte Sequenz mit den Einstellungen des jeweiligen Tabs angewendet.',
+      'batch.run': 'Auf den Sequenzen ausfuhren',
+      'batch.running': 'Verarbeitung...',
+      'batch.noSeq': 'Keine Sequenz angekreuzt.',
+      'batch.noneFound': 'Keine Sequenz im Projekt.',
+      'batch.confirm': 'Operation auf {n} Sequenz(en) anwenden?',
+      'batch.start': 'Stapel: {op} auf {n} Sequenz(en)...',
+      'batch.done': 'Stapel abgeschlossen ({n} Sequenz(en)).'
     }
   };
   const LANGS = ['fr', 'en', 'es', 'de'];
@@ -771,6 +835,7 @@
       tabBtns.forEach((b) => b.classList.toggle('active', b === btn));
       tabPanels.forEach((p) => p.classList.toggle('hidden', p.id !== 'tab-' + tab));
       savePref('tab', tab);
+      if (tab === 'batch') loadSequences();
     });
   });
 
@@ -1116,6 +1181,97 @@
   }
 
   // ------------------------------------------------------------------
+  // Batch over several sequences
+  // ------------------------------------------------------------------
+  async function loadSequences() {
+    const raw = await evalScript('getSequences()');
+    let r;
+    try { r = JSON.parse(raw); }
+    catch (e) { log('err', t('msg.badResponse', { raw: raw })); return; }
+    batchSeqsEl.innerHTML = '';
+    if (r.error) { log('warn', r.error); return; }
+    const seqs = r.sequences || [];
+    if (!seqs.length) {
+      const e = document.createElement('div');
+      e.className = 'empty';
+      e.textContent = t('batch.noneFound');
+      batchSeqsEl.appendChild(e);
+      return;
+    }
+    seqs.forEach((s) => {
+      const lbl = document.createElement('label');
+      lbl.className = 'check';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'batch-cb';
+      cb.value = String(s.index);
+      cb.checked = !!s.active;
+      const span = document.createElement('span');
+      span.textContent = s.name + (s.active ? ' •' : '');
+      lbl.appendChild(cb);
+      lbl.appendChild(span);
+      batchSeqsEl.appendChild(lbl);
+    });
+  }
+
+  function checkedSeqIndices() {
+    return Array.prototype.slice.call(batchSeqsEl.querySelectorAll('.batch-cb'))
+      .filter((cb) => cb.checked)
+      .map((cb) => parseInt(cb.value, 10));
+  }
+
+  async function runBatch() {
+    const indices = checkedSeqIndices();
+    if (!indices.length) { log('warn', t('batch.noSeq')); return; }
+    const op = (batchOpEl.value === 'gaps') ? 'gaps' : 'broll';
+
+    let params;
+    if (op === 'broll') {
+      params = buildBRollParams();
+      if (!params) return;
+    } else {
+      const keys = checkedGapsKeys();
+      if (!keys.length) { log('warn', t('gaps.noTrack')); return; }
+      params = { tracks: keys.map((k) => { const pp = k.split(':'); return { trackType: pp[0], trackIdx: parseInt(pp[1], 10) }; }) };
+    }
+
+    if (!askConfirm(t('batch.confirm', { n: indices.length }))) return;
+
+    batchRunBtn.disabled = true;
+    batchRunBtn.textContent = t('batch.running');
+    log('info', t('batch.start', { n: indices.length, op: op }));
+
+    const payload = JSON.stringify({ op: op, params: params, seqIndices: indices });
+    const raw = await evalScriptP("batchOperation('" + jsString(payload) + "')");
+
+    let r;
+    try { r = JSON.parse(raw); }
+    catch (e) {
+      log('err', t('msg.badResponse', { raw: raw }));
+      batchRunBtn.disabled = false;
+      batchRunBtn.textContent = t('batch.run');
+      return;
+    }
+
+    if (r.error) {
+      log('err', r.error);
+    } else {
+      const res = r.results || [];
+      for (let i = 0; i < res.length; i++) {
+        const x = res[i];
+        if (x.error) log('warn', x.name + ' : ' + x.error);
+        else if (op === 'gaps') log('ok', x.name + ' : ' + (x.shifted || 0) + ' clip(s), ' + (x.totalGapClosed || 0) + 's');
+        else log('ok', x.name + ' : ' + (x.created || 0) + ' extrait(s)');
+      }
+      log('ok', t('batch.done', { n: res.length }));
+    }
+
+    batchRunBtn.disabled = false;
+    batchRunBtn.textContent = t('batch.run');
+    await refreshTracks();
+  }
+
+  // ------------------------------------------------------------------
   // Undo / redo (relays to the host; Premiere scripting has no reliable
   // undo, so this usually just reminds the user of Ctrl+Z).
   // ------------------------------------------------------------------
@@ -1162,6 +1318,10 @@
   gapsBtn.addEventListener('click', removeGaps);
   gapsAllBtn.addEventListener('click', () => setAllGaps(true));
   gapsNoneBtn.addEventListener('click', () => setAllGaps(false));
+  batchRunBtn.addEventListener('click', runBatch);
+  batchAllBtn.addEventListener('click', () => batchSeqsEl.querySelectorAll('.batch-cb').forEach((cb) => { cb.checked = true; }));
+  batchNoneBtn.addEventListener('click', () => batchSeqsEl.querySelectorAll('.batch-cb').forEach((cb) => { cb.checked = false; }));
+  batchReloadBtn.addEventListener('click', loadSequences);
   clearLogBtn.addEventListener('click', () => { logEl.innerHTML = ''; });
   if (logExportBtn) logExportBtn.addEventListener('click', exportLog);
   presetLoadBtn.addEventListener('click', loadPreset);
@@ -1201,5 +1361,5 @@
   wirePersistence();
   refreshPresetList();
   log('info', t('msg.loaded'));
-  setTimeout(refreshTracks, 300);
+  setTimeout(() => { refreshTracks(); loadSequences(); }, 300);
 })();

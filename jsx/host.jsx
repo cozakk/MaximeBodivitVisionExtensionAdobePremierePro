@@ -941,3 +941,72 @@ function _removeVideoClipAt(seq, dstIdx, startSec, tol, warnings) {
     warnings.push('Suppression impossible a t=' + _r(startSec) + 's (API remove indisponible).');
     return false;
 }
+
+/**
+ * List every sequence in the project (for batch mode).
+ */
+function getSequences() {
+    try {
+        if (!app.project) return JSON.stringify({ error: 'Aucun projet ouvert.' });
+        var seqs = app.project.sequences;
+        var n = seqs.numSequences;
+        var activeId = null;
+        try { activeId = app.project.activeSequence ? app.project.activeSequence.sequenceID : null; } catch (e) {}
+
+        var list = [];
+        for (var i = 0; i < n; i++) {
+            var s = seqs[i];
+            list.push({ index: i, name: s.name, active: (s.sequenceID === activeId) });
+        }
+        return JSON.stringify({ sequences: list });
+    } catch (e) {
+        return JSON.stringify({ error: 'Exception: ' + e.toString() });
+    }
+}
+
+/**
+ * Apply an operation (B-Roll or gap removal) to several sequences in a row.
+ * Each target sequence is activated (openSequence) and then the existing
+ * generateBRoll/removeGaps logic runs on it. The previously active sequence
+ * is restored at the end.
+ *
+ * @param {string} jsonStr JSON: { op:'broll'|'gaps', params:{...}, seqIndices:[int,...] }
+ */
+function batchOperation(jsonStr) {
+    var results = [];
+    try {
+        var p = JSON.parse(jsonStr);
+        if (!app.project) return JSON.stringify({ error: 'Aucun projet ouvert.' });
+
+        var seqs = app.project.sequences;
+        var indices = p.seqIndices || [];
+        var op = (p.op === 'gaps') ? 'gaps' : 'broll';
+        var params = p.params || {};
+        if (!indices.length) return JSON.stringify({ error: 'Aucune sequence selectionnee.' });
+
+        var prevActiveId = null;
+        try { prevActiveId = app.project.activeSequence ? app.project.activeSequence.sequenceID : null; } catch (e) {}
+
+        for (var k = 0; k < indices.length; k++) {
+            var idx = indices[k];
+            if (idx < 0 || idx >= seqs.numSequences) { results.push({ index: idx, error: 'Sequence inexistante.' }); continue; }
+            var s = seqs[idx];
+            var name = s.name;
+            try { app.project.openSequence(s.sequenceID); }
+            catch (e) { results.push({ index: idx, name: name, error: 'Activation impossible: ' + e.toString() }); continue; }
+
+            var raw = (op === 'gaps') ? removeGaps(JSON.stringify(params)) : generateBRoll(JSON.stringify(params));
+            var res;
+            try { res = JSON.parse(raw); } catch (e) { res = { error: 'Reponse invalide du host.' }; }
+            res.index = idx;
+            res.name = name;
+            results.push(res);
+        }
+
+        if (prevActiveId) { try { app.project.openSequence(prevActiveId); } catch (e) {} }
+
+        return JSON.stringify({ ok: true, op: op, results: results });
+    } catch (err) {
+        return JSON.stringify({ error: 'Exception: ' + err.toString(), results: results });
+    }
+}

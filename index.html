@@ -20,6 +20,7 @@
     <nav class="tabs">
       <button class="tab active" data-tab="broll">B-Roll</button>
       <button class="tab" data-tab="gaps" data-i18n="tab.gaps">Compactage</button>
+      <button class="tab" data-tab="batch" data-i18n="tab.batch">Batch</button>
     </nav>
 
     <section class="info-bar">
@@ -148,6 +149,36 @@
         </div>
 
         <button id="gaps-btn" class="primary" data-i18n="btn.gaps">Supprimer les trous</button>
+
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- TAB 3 : Batch over several sequences                         -->
+      <!-- ============================================================ -->
+      <section class="tab-content hidden" id="tab-batch">
+
+        <div class="field">
+          <label for="batch-op" data-i18n="batch.op">Operation a appliquer</label>
+          <select id="batch-op">
+            <option value="broll" data-i18n="batch.opBroll">B-Roll (reglages de l'onglet B-Roll)</option>
+            <option value="gaps" data-i18n="batch.opGaps">Compactage (pistes cochees)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label data-i18n="batch.sequences">Sequences cibles</label>
+          <div id="batch-seqs" class="track-checklist">
+            <!-- cases a cocher injectees par main.js -->
+          </div>
+          <div class="row mini-row">
+            <button type="button" id="batch-all" class="mini" data-i18n="gaps.all">Tout</button>
+            <button type="button" id="batch-none" class="mini" data-i18n="gaps.none">Aucune</button>
+            <button type="button" id="batch-reload" class="mini" data-i18n="batch.reload">Recharger</button>
+          </div>
+          <p class="hint" data-i18n="batch.hint">L'operation choisie est appliquee a chaque sequence cochee, avec les reglages de l'onglet correspondant.</p>
+        </div>
+
+        <button id="batch-run" class="primary" data-i18n="batch.run">Lancer sur les sequences</button>
 
       </section>
 
