@@ -18,6 +18,7 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [x] Regroupement des opérations en un seul Undo (`openUndoGroup` / `closeUndoGroup`)
 - [x] Création automatique de pistes vidéo manquantes via QE DOM (`_ensureVideoTrack`)
 - [x] Tests automatisés (syntaxe JS + cohérence i18n) + workflow CI GitHub Actions — v1.4.0
+- [x] Tests de l'algorithme de compactage sur un faux DOM Premiere (`test/compact.mjs`) — v1.5.0
 
 ## Interface (UI)
 
@@ -74,9 +75,9 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [x] Déplacement des items liés (audio/vidéo synchronisés)
 - [x] Compte-rendu : nb de clips déplacés + durée totale supprimée
 - [x] Compactage de plusieurs pistes en une seule action (cases à cocher + Tout/Aucune) — v1.3.0
-- [ ] **Compactage synchronisé V/A** — garder chaque audio sous sa vidéo (voir spec ci-dessous) — ⚠️ bug actuel
+- [x] **Compactage synchronisé V/A** — garder chaque audio sous sa vidéo (voir spec ci-dessous) — v1.5.0
 
-### Spec — Compactage synchronisé (à implémenter)
+### Spec — Compactage synchronisé (implémenté en v1.5.0)
 
 **Problème constaté.** `_compactTrack()` traite chaque piste cochée
 *indépendamment* : V1 se compacte de son côté, A1 du sien. Comme l'audio n'est
@@ -119,33 +120,33 @@ trou, `0.02 s` pour vérifier qu'un `move()` a bien eu lieu.
 
 **Interface**
 
-- [ ] Case à cocher `opt-sync-gaps` dans l'onglet Compactage, **cochée par
+- [x] Case à cocher `opt-sync-gaps` dans l'onglet Compactage, **cochée par
       défaut**, libellé « Garder la synchro audio/vidéo (compacter les pistes
       ensemble) » + hint expliquant que seuls les trous communs sont fermés.
-- [ ] État mémorisé dans les prefs (`savePref` / `getPref`), comme `gapsChecked`.
-- [ ] Décochée → comportement historique piste par piste (`_compactTrack`) conservé.
-- [ ] Clés i18n FR/EN/ES/DE pour le libellé, le hint et le compte-rendu
+- [x] État mémorisé dans les prefs (`savePref` / `getPref`), comme `gapsChecked`.
+- [x] Décochée → comportement historique piste par piste (`_compactTrack`) conservé.
+- [x] Clés i18n FR/EN/ES/DE pour le libellé, le hint et le compte-rendu
       (la parité des 4 tables est vérifiée par `test/check.mjs`).
 
 **Côté hôte**
 
-- [ ] `removeGaps()` route vers `_compactTracksSynced()` ou `_compactTrack()`
+- [x] `removeGaps()` route vers `_compactTracksSynced()` ou `_compactTrack()`
       selon le flag `p.synced` du payload ; un seul `openUndoGroup` pour
       l'ensemble dans les deux cas.
-- [ ] Compte-rendu : nb de trous fermés, nb de clips déplacés, durée totale
+- [x] Compte-rendu : nb de trous fermés, nb de clips déplacés, durée totale
       supprimée.
-- [ ] Le mode batch suit automatiquement (`batchOperation` relaie `params` tel quel).
+- [x] Le mode batch suit automatiquement (`batchOperation` relaie `params` tel quel).
 
 **Cas limites à traiter**
 
-- [ ] Pistes **non cochées** : elles ne sont pas déplacées. Journaliser un
+- [x] Pistes **non cochées** : elles ne sont pas déplacées. Journaliser un
       avertissement si l'une d'elles contient des clips après le premier trou
       fermé (risque de désynchro avec V2/V3).
-- [ ] **Trou de tête** : fermé lui aussi, en décalant toutes les pistes cochées
+- [x] **Trou de tête** : fermé lui aussi, en décalant toutes les pistes cochées
       du même delta (absorbe l'item de backlog correspondant).
-- [ ] Une **seule piste** cochée : le résultat est identique au compactage actuel
+- [x] Une **seule piste** cochée : le résultat est identique au compactage actuel
       (l'union se réduit à cette piste) — à vérifier en non-régression.
-- [ ] Audio **plus long** que sa vidéo (ou décalé) : géré nativement par l'union,
+- [x] Audio **plus long** que sa vidéo (ou décalé) : géré nativement par l'union,
       l'intervalle occupé s'étend jusqu'à la fin de l'audio.
 
 ## Onglet Batch
@@ -187,7 +188,7 @@ trou, `0.02 s` pour vérifier qu'un `move()` a bien eu lieu.
 - [ ] Compacter uniquement entre deux marqueurs ou une plage In/Out
 - [ ] Conserver un espace fixe entre clips (au lieu de coller à zéro)
 - [ ] Aperçu (dry-run) listant les trous avant suppression
-- [ ] ~~Fermer aussi le trou de tête commun en gardant la synchro inter-pistes~~ → couvert par la spec « Compactage synchronisé » ci-dessus
+- [x] ~~Fermer aussi le trou de tête commun en gardant la synchro inter-pistes~~ → livré avec le « Compactage synchronisé » — v1.5.0
 - [ ] Détecter et supprimer les clips vides / silences
 
 ### Audio

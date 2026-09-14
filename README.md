@@ -9,7 +9,7 @@ opérations de montage répétitives, directement depuis un panneau intégré :
 - **Compactage** — supprime tous les trous entre les clips d'une piste en les
   décalant vers la gauche pour qu'ils se touchent.
 
-> Version actuelle : **v1.4.0** — voir [.claude/changelog.md](.claude/changelog.md).
+> Version actuelle : **v1.5.0** — voir [.claude/changelog.md](.claude/changelog.md).
 
 ---
 
@@ -78,9 +78,17 @@ L'étiquette couleur du clip source est reportée sur l'extrait (et son audio li
 
 ### Onglet Compactage
 
-1. **Piste à compacter** — n'importe quelle piste vidéo ou audio.
-2. **Supprimer les trous** — tous les espaces vides entre clips sont fermés ;
-   les éléments liés (audio/vidéo) se déplacent ensemble.
+1. **Pistes à compacter** — coche une ou plusieurs pistes vidéo ou audio.
+2. **Garder la synchro audio/vidéo** *(coché par défaut)* — les pistes cochées
+   sont compactées **ensemble** : seuls les trous **communs** à toutes sont
+   fermés et tout ce qui suit est décalé du **même temps** sur chaque piste,
+   donc chaque audio reste exactement sous sa vidéo. Décoche l'option pour
+   revenir au compactage piste par piste (chaque piste collée à partir de 0).
+3. **Supprimer les trous** — l'ensemble compte comme une seule annulation.
+
+> Les pistes **non cochées** ne sont pas déplacées : si elles contiennent des
+> clips, un avertissement le signale dans le journal (leur synchro avec le reste
+> peut se rompre).
 
 ## Structure du projet
 
@@ -92,6 +100,9 @@ com.maximebodivit.visionext/
 ├── js/main.js             Logique panneau + pont CEP → ExtendScript
 ├── jsx/host.jsx           Code ExtendScript exécuté dans Premiere Pro
 ├── README.md              Ce fichier
+├── test/                  Contrôles automatisés (`npm test`)
+│   ├── check.mjs          Syntaxe JS + cohérence des tables i18n
+│   └── compact.mjs        Algorithme de compactage sur un faux DOM Premiere
 └── .claude/
     ├── features.md        Suivi des fonctionnalités ([ ] / [x])
     └── changelog.md       Historique des versions
@@ -107,7 +118,10 @@ com.maximebodivit.visionext/
   laissant des poignées de chaque côté.
 - **Compactage** : les trous sont fermés un par un, en re-capturant la piste
   après chaque déplacement (les références de clips deviennent invalides après
-  un `move()`).
+  un `move()`). En mode synchronisé, l'occupation de toutes les pistes cochées
+  est d'abord fusionnée en une seule timeline pour n'y chercher que les trous
+  communs ; un clip déjà déplacé par son item lié est détecté et jamais déplacé
+  deux fois.
 - Création de pistes vidéo via le **QE DOM** (`qe.project`).
 
 ## Dépannage

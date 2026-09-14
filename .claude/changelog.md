@@ -6,6 +6,42 @@ Dates au format AAAA-MM-JJ.
 
 ---
 
+## [1.5.0] — 2026-09-14
+
+### Corrigé
+
+- **Compactage : la synchro audio/vidéo est préservée.** Chaque piste cochée
+  était compactée *indépendamment* : quand seules certaines vidéos portaient du
+  son, les clips audio se retrouvaient collés au début de la timeline — et, les
+  items étant liés, ils y ramenaient leur vidéo par-dessus le premier clip.
+
+### Ajouté
+
+- **Mode « compactage synchronisé »** (case cochée par défaut dans l'onglet
+  Compactage, mémorisée) : les pistes cochées sont traitées comme un seul bloc.
+  Seuls les trous **communs** à toutes sont fermés, et tout ce qui suit est
+  décalé du **même delta** sur chaque piste, donc chaque audio reste exactement
+  sous sa vidéo. Le trou de tête est fermé lui aussi.
+- Côté hôte : `_unionOccupancy`, `_shiftTracksAfter`, `_compactTracksSynced` et
+  `_warnUncheckedTracks` ; `removeGaps` route selon le flag `synced` et conserve
+  l'ancien comportement piste par piste quand la case est décochée.
+- **Avertissement** quand des pistes non cochées contiennent des clips : elles ne
+  bougent pas, leur synchro avec le reste peut donc se rompre.
+- **Tests de l'algorithme** (`test/compact.mjs`) : host.jsx est chargé dans un VM
+  avec une fausse séquence Premiere (pistes, clips, items liés, `move()`), ce qui
+  couvre la synchro préservée, la reproduction du bug de l'ancien mode,
+  l'équivalence sur une piste seule, l'avertissement des pistes non cochées,
+  l'audio plus long que sa vidéo et l'absence de trou.
+
+### Modifié / Interne
+
+- Compte-rendu du compactage distinct selon le mode (trous fermés vs clips
+  déplacés) ; le mode batch relaie le flag `synced`.
+- `npm test` et la CI lancent aussi `test/compact.mjs`.
+- Version affichée : `v1.4.0` → `v1.5.0`.
+
+---
+
 ## [1.4.0] — 2026-06-09
 
 ### Ajouté
