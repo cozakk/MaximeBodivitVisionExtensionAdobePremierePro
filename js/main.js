@@ -61,6 +61,7 @@
   const gapsAllBtn   = document.getElementById('gaps-all');
   const gapsNoneBtn  = document.getElementById('gaps-none');
   const gapsBtn      = document.getElementById('gaps-btn');
+  const optSyncGaps  = document.getElementById('opt-sync-gaps');
 
   // Batch tab
   const batchOpEl     = document.getElementById('batch-op');
@@ -232,6 +233,8 @@
       'gaps.all': 'Tout',
       'gaps.none': 'Aucune',
       'gaps.hint': "Coche une ou plusieurs pistes. Tous les trous entre clips de chaque piste cochee sont supprimes (clips decales vers la gauche). L'ensemble compte comme une seule annulation.",
+      'gaps.sync': 'Garder la synchro audio/video (compacter les pistes ensemble)',
+      'gaps.syncHint': "Seuls les trous communs a toutes les pistes cochees sont fermes ; tout ce qui suit est decale du meme temps sur chaque piste, donc chaque audio reste sous sa video.",
       'btn.gaps': 'Supprimer les trous',
       'log.title': 'Journal',
       'log.diag': 'Diagnostic',
@@ -280,6 +283,7 @@
       'gaps.confirm': 'Le compactage va traiter environ {n} clips. Continuer ?',
       'gaps.start': 'Compactage de {n} piste(s) : {list}',
       'gaps.done': 'Termine. {n} clip(s) deplace(s) sur {t} piste(s). Total supprime : {sec}s.',
+      'gaps.doneSync': 'Termine. {g} trou(s) ferme(s) sur {t} piste(s) synchronisees. Total supprime : {sec}s.',
       'preset.needName': "Donne un nom au profil avant d'enregistrer.",
       'preset.saved': 'Profil enregistre : "{name}".',
       'preset.pick': 'Choisis un profil dans la liste.',
@@ -340,6 +344,8 @@
       'gaps.all': 'All',
       'gaps.none': 'None',
       'gaps.hint': 'Tick one or more tracks. All gaps between clips of each ticked track are removed (clips shifted left). The whole run counts as a single undo.',
+      'gaps.sync': 'Keep audio/video in sync (compact the tracks together)',
+      'gaps.syncHint': 'Only the gaps common to every ticked track are closed; everything after is shifted by the same amount on each track, so each audio stays under its video.',
       'btn.gaps': 'Remove gaps',
       'log.title': 'Log',
       'log.diag': 'Diagnostic',
@@ -388,6 +394,7 @@
       'gaps.confirm': 'Compacting will process about {n} clips. Continue?',
       'gaps.start': 'Compacting {n} track(s): {list}',
       'gaps.done': 'Done. {n} clip(s) shifted across {t} track(s). Total removed: {sec}s.',
+      'gaps.doneSync': 'Done. {g} gap(s) closed across {t} synced track(s). Total removed: {sec}s.',
       'preset.needName': 'Name the profile before saving.',
       'preset.saved': 'Profile saved: "{name}".',
       'preset.pick': 'Pick a profile from the list.',
@@ -448,6 +455,8 @@
       'gaps.all': 'Todo',
       'gaps.none': 'Ninguna',
       'gaps.hint': 'Marca una o varias pistas. Se eliminan todos los huecos entre clips de cada pista marcada (los clips se desplazan a la izquierda). Todo cuenta como una sola anulacion.',
+      'gaps.sync': 'Mantener la sincronia audio/video (compactar las pistas juntas)',
+      'gaps.syncHint': 'Solo se cierran los huecos comunes a todas las pistas marcadas; todo lo posterior se desplaza lo mismo en cada pista, asi cada audio permanece bajo su video.',
       'btn.gaps': 'Eliminar los huecos',
       'log.title': 'Registro',
       'log.diag': 'Diagnostico',
@@ -496,6 +505,7 @@
       'gaps.confirm': 'El compactado procesara unos {n} clips. Continuar?',
       'gaps.start': 'Compactando {n} pista(s): {list}',
       'gaps.done': 'Hecho. {n} clip(s) desplazado(s) en {t} pista(s). Total eliminado: {sec}s.',
+      'gaps.doneSync': 'Hecho. {g} hueco(s) cerrado(s) en {t} pista(s) sincronizadas. Total eliminado: {sec}s.',
       'preset.needName': 'Da un nombre al perfil antes de guardar.',
       'preset.saved': 'Perfil guardado: "{name}".',
       'preset.pick': 'Elige un perfil de la lista.',
@@ -556,6 +566,8 @@
       'gaps.all': 'Alle',
       'gaps.none': 'Keine',
       'gaps.hint': 'Eine oder mehrere Spuren ankreuzen. Alle Lucken zwischen Clips jeder Spur werden entfernt (Clips nach links geruckt). Alles zahlt als ein einziges Ruckgangig.',
+      'gaps.sync': 'Audio/Video synchron halten (Spuren gemeinsam verdichten)',
+      'gaps.syncHint': 'Nur die allen angekreuzten Spuren gemeinsamen Lucken werden geschlossen; alles danach wird auf jeder Spur um denselben Betrag verschoben, so bleibt jedes Audio unter seinem Video.',
       'btn.gaps': 'Lucken entfernen',
       'log.title': 'Protokoll',
       'log.diag': 'Diagnose',
@@ -604,6 +616,7 @@
       'gaps.confirm': 'Das Verdichten verarbeitet etwa {n} Clips. Fortfahren?',
       'gaps.start': 'Verdichte {n} Spur(en): {list}',
       'gaps.done': 'Fertig. {n} Clip(s) auf {t} Spur(en) verschoben. Insgesamt entfernt: {sec}s.',
+      'gaps.doneSync': 'Fertig. {g} Lucke(n) auf {t} synchronisierten Spur(en) geschlossen. Insgesamt entfernt: {sec}s.',
       'preset.needName': 'Profil vor dem Speichern benennen.',
       'preset.saved': 'Profil gespeichert: "{name}".',
       'preset.pick': 'Ein Profil aus der Liste wahlen.',
@@ -1153,7 +1166,8 @@
     gapsBtn.textContent = t('busy.compacting');
     log('info', t('gaps.start', { n: tracks.length, list: keys.map(prettyTrack).join(', ') }));
 
-    const payload = JSON.stringify({ tracks: tracks });
+    const synced = optSyncGaps ? optSyncGaps.checked : true;
+    const payload = JSON.stringify({ tracks: tracks, synced: synced });
     const raw = await evalScriptP("removeGaps('" + jsString(payload) + "')");
 
     let result;
@@ -1168,7 +1182,11 @@
     if (result.error) {
       log('err', result.error);
     } else {
-      log('ok', t('gaps.done', { n: result.shifted || 0, t: result.tracks || tracks.length, sec: result.totalGapClosed || 0 }));
+      if (result.synced) {
+        log('ok', t('gaps.doneSync', { g: result.gaps || 0, t: result.tracks || tracks.length, sec: result.totalGapClosed || 0 }));
+      } else {
+        log('ok', t('gaps.done', { n: result.shifted || 0, t: result.tracks || tracks.length, sec: result.totalGapClosed || 0 }));
+      }
       if (result.warnings && result.warnings.length) {
         for (let i = 0; i < result.warnings.length; i++) {
           log('warn', result.warnings[i]);
@@ -1232,7 +1250,10 @@
     } else {
       const keys = checkedGapsKeys();
       if (!keys.length) { log('warn', t('gaps.noTrack')); return; }
-      params = { tracks: keys.map((k) => { const pp = k.split(':'); return { trackType: pp[0], trackIdx: parseInt(pp[1], 10) }; }) };
+      params = {
+        tracks: keys.map((k) => { const pp = k.split(':'); return { trackType: pp[0], trackIdx: parseInt(pp[1], 10) }; }),
+        synced: optSyncGaps ? optSyncGaps.checked : true
+      };
     }
 
     if (!askConfirm(t('batch.confirm', { n: indices.length }))) return;
@@ -1358,6 +1379,10 @@
   seqNameEl.textContent = t('seq.none');
   restoreTab();
   restoreSettings();
+  if (optSyncGaps) {
+    optSyncGaps.checked = getPref('syncGaps', true);
+    optSyncGaps.addEventListener('change', () => savePref('syncGaps', optSyncGaps.checked));
+  }
   wirePersistence();
   refreshPresetList();
   log('info', t('msg.loaded'));

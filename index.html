@@ -148,6 +148,14 @@
           <p class="hint" data-i18n="gaps.hint">Coche une ou plusieurs pistes. Tous les trous entre clips de chaque piste cochee sont supprimes (clips decales vers la gauche). L'ensemble compte comme une seule annulation.</p>
         </div>
 
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" id="opt-sync-gaps" checked />
+            <span data-i18n="gaps.sync">Garder la synchro audio/video (compacter les pistes ensemble)</span>
+          </label>
+          <p class="hint" data-i18n="gaps.syncHint">Seuls les trous communs a toutes les pistes cochees sont fermes ; tout ce qui suit est decale du meme temps sur chaque piste, donc chaque audio reste sous sa video.</p>
+        </div>
+
         <button id="gaps-btn" class="primary" data-i18n="btn.gaps">Supprimer les trous</button>
 
       </section>
