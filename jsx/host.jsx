@@ -801,11 +801,246 @@ function _compactTrack(track, warnings, label) {
 }
 
 /**
- * Remove all gaps on one OR several tracks of the active sequence.
+ * Merge the clip intervals of every given track into ONE global occupancy
+ * list (sorted, overlapping/contiguous intervals fused). This is what turns
+ * "several independent tracks" into a single timeline to reason about.
+ *
+ * @param {Array} trackRefs [{ track, label, type, idx }, ...]
+ * @return {Array} [{ start, end }, ...] sorted by start, non-overlapping.
+ */
+function _unionOccupancy(trackRefs, tol) {
+    var all = [];
+    var t, i, clips;
+    for (t = 0; t < trackRefs.length; t++) {
+        clips = _snapshotClips(trackRefs[t].track);
+        for (i = 0; i < clips.length; i++) {
+            all.push({ start: clips[i].startSec, end: clips[i].startSec + clips[i].durationSec });
+        }
+    }
+    if (all.length === 0) return [];
+    all.sort(function (a, b) { return a.start - b.start; });
+
+    var merged = [{ start: all[0].start, end: all[0].end }];
+    for (i = 1; i < all.length; i++) {
+        var cur = merged[merged.length - 1];
+        if (all[i].start <= cur.end + tol) {
+            if (all[i].end > cur.end) cur.end = all[i].end;
+        } else {
+            merged.push({ start: all[i].start, end: all[i].end });
+        }
+    }
+    return merged;
+}
+
+/**
+ * Shift every clip starting at/after `fromSec` left by `delta`, across ALL
+ * the given tracks, so their relative positions (audio under its video) are
+ * preserved exactly.
+ *
+ * Clips are processed left to right: the room in front of each one is free
+ * by construction, since we only ever close a gap common to every track and
+ * everything after it moves by the same amount.
+ *
+ * move() already drags an item's LINKED partners along, so a clip may
+ * already sit at its target position when its turn comes — that is detected
+ * and counted, not moved a second time.
+ *
+ * @return {number} how many clips actually ended up shifted.
+ */
+function _shiftTracksAfter(trackRefs, fromSec, delta, warnings) {
+    var TOL = 0.02;
+    var targets = [];
+    var t, i, j, clips;
+
+    for (t = 0; t < trackRefs.length; t++) {
+        clips = _snapshotClips(trackRefs[t].track);
+        for (i = 0; i < clips.length; i++) {
+            if (clips[i].startSec >= fromSec - 0.001) {
+                targets.push({
+                    ti: t,
+                    startSec: clips[i].startSec,
+                    durationSec: clips[i].durationSec,
+                    name: clips[i].name
+                });
+            }
+        }
+    }
+    targets.sort(function (a, b) { return a.startSec - b.startSec; });
+
+    var moved = 0;
+    for (i = 0; i < targets.length; i++) {
+        var tg = targets[i];
+        var track = trackRefs[tg.ti].track;
+        var label = trackRefs[tg.ti].label;
+        var newStart = tg.startSec - delta;
+        var newEnd = newStart + tg.durationSec;
+
+        // Re-snapshot: earlier moves invalidated every cached reference.
+        var live = _snapshotClips(track);
+
+        // Is the clip still where we found it?
+        var clip = null;
+        for (j = 0; j < live.length; j++) {
+            if (Math.abs(live[j].startSec - tg.startSec) < TOL &&
+                Math.abs(live[j].durationSec - tg.durationSec) < TOL) { clip = live[j]; break; }
+        }
+
+        if (!clip) {
+            // Already at its target position => dragged along by its linked
+            // video/audio partner. Count it, never move it twice.
+            var already = false;
+            for (j = 0; j < live.length; j++) {
+                if (Math.abs(live[j].startSec - newStart) < TOL &&
+                    Math.abs(live[j].durationSec - tg.durationSec) < TOL) { already = true; break; }
+            }
+            if (already) { moved++; }
+            else { warnings.push('Clip "' + tg.name + '" introuvable sur ' + label + ' a t=' + _r(tg.startSec) + 's, ignore.'); }
+            continue;
+        }
+
+        // Landing zone must be free (ignoring the clip itself).
+        var blocked = false;
+        for (j = 0; j < live.length; j++) {
+            if (Math.abs(live[j].startSec - tg.startSec) < TOL) continue;
+            if (live[j].startSec < newEnd - 0.001 &&
+                (live[j].startSec + live[j].durationSec) > newStart + 0.001) { blocked = true; break; }
+        }
+        if (blocked) {
+            warnings.push('Deplacement refuse sur ' + label + ' pour "' + tg.name + '" : zone d arrivee occupee.');
+            continue;
+        }
+
+        try {
+            clip.ref.move(_timeFromSeconds(-delta));
+        } catch (e) {
+            warnings.push('Deplacement a echoue (' + label + ') pour "' + tg.name + '": ' + e.toString());
+            continue;
+        }
+
+        // Verify the move landed (move() is a no-op on some versions).
+        var after = _snapshotClips(track);
+        var ok = false;
+        for (j = 0; j < after.length; j++) {
+            if (Math.abs(after[j].startSec - newStart) < TOL &&
+                Math.abs(after[j].durationSec - tg.durationSec) < TOL) { ok = true; break; }
+        }
+        if (!ok) {
+            warnings.push('Le clip "' + tg.name + '" ne s est pas deplace (' + label + '; move() sans effet sur cette version).');
+            continue;
+        }
+        moved++;
+    }
+    return moved;
+}
+
+/**
+ * Compact several tracks TOGETHER, as one block.
+ *
+ * Unlike _compactTrack(), which butts the clips of a single track against
+ * each other — and therefore drags every audio clip to the head of the
+ * timeline when only some videos carry sound — this closes ONLY the gaps
+ * common to every checked track, shifting all of them by the same amount.
+ * Each audio clip therefore stays exactly under its own video.
+ *
+ *   1. Union of the occupied intervals over all checked tracks.
+ *   2. First common gap = the head gap, or the space between two merged
+ *      intervals. Nothing after the last clip is touched.
+ *   3. Shift everything at/after the gap left by its width, on every track.
+ *   4. Re-compute and repeat, bounded by the total clip count.
+ *
+ * @return {{shifted:number, totalGapClosed:number, gaps:number}}
+ */
+function _compactTracksSynced(trackRefs, warnings) {
+    var TOL_GAP = 0.001;
+    var totalClips = 0;
+    var t, k;
+
+    for (t = 0; t < trackRefs.length; t++) {
+        try { totalClips += trackRefs[t].track.clips.numItems; } catch (e) {}
+    }
+    if (totalClips === 0) return { shifted: 0, totalGapClosed: 0, gaps: 0 };
+
+    var shifted = 0;
+    var totalGapClosed = 0;
+    var gapsClosed = 0;
+    var maxPasses = totalClips + 2;
+    var pass = 0;
+
+    while (pass++ < maxPasses) {
+        var occ = _unionOccupancy(trackRefs, TOL_GAP);
+        if (occ.length === 0) break;
+
+        // Head gap first, then the first hole between two merged blocks.
+        var gapStart = -1, gapEnd = -1;
+        if (occ[0].start > TOL_GAP) {
+            gapStart = 0;
+            gapEnd = occ[0].start;
+        } else {
+            for (k = 0; k + 1 < occ.length; k++) {
+                if (occ[k + 1].start - occ[k].end > TOL_GAP) {
+                    gapStart = occ[k].end;
+                    gapEnd = occ[k + 1].start;
+                    break;
+                }
+            }
+        }
+        if (gapEnd < 0) break; // no common gap left — done
+
+        var delta = gapEnd - gapStart;
+        var movedNow = _shiftTracksAfter(trackRefs, gapEnd, delta, warnings);
+        if (movedNow === 0) {
+            warnings.push('Trou a t=' + _r(gapStart) + 's non ferme : aucun clip deplacable.');
+            break;
+        }
+
+        shifted += movedNow;
+        totalGapClosed += delta;
+        gapsClosed++;
+    }
+
+    return { shifted: shifted, totalGapClosed: totalGapClosed, gaps: gapsClosed };
+}
+
+/**
+ * Warn when tracks that were NOT checked still hold clips: they stay put
+ * while the checked ones move, so their sync with the rest breaks.
+ */
+function _warnUncheckedTracks(seq, refs, warnings) {
+    function isChecked(type, idx) {
+        for (var i = 0; i < refs.length; i++) {
+            if (refs[i].type === type && refs[i].idx === idx) return true;
+        }
+        return false;
+    }
+    var busy = [];
+    var i;
+    try {
+        for (i = 0; i < seq.videoTracks.numTracks; i++) {
+            if (!isChecked('video', i) && seq.videoTracks[i].clips.numItems > 0) busy.push('V' + (i + 1));
+        }
+        for (i = 0; i < seq.audioTracks.numTracks; i++) {
+            if (!isChecked('audio', i) && seq.audioTracks[i].clips.numItems > 0) busy.push('A' + (i + 1));
+        }
+    } catch (e) { return; }
+
+    if (busy.length) {
+        warnings.push('Pistes non cochees contenant des clips (non deplacees, risque de desynchro) : ' + busy.join(', ') + '.');
+    }
+}
+
+/**
+ * Remove gaps on one OR several tracks of the active sequence.
+ *
+ * Two modes:
+ *   - synced (default)  : every checked track is compacted TOGETHER, only
+ *     the gaps common to all of them are closed, everything after a gap is
+ *     shifted by the same amount. Each audio clip stays under its video.
+ *   - per-track         : the historical behaviour, each track compacted on
+ *     its own (clips butted against each other from t=0).
  *
  * @param {string} jsonStr JSON, either:
- *   { tracks: [ { trackType:'video'|'audio', trackIdx:int }, ... ] }   (multi)
- *   { trackType:'video'|'audio', trackIdx:int }                        (single, back-compat)
+ *   { tracks: [ { trackType:'video'|'audio', trackIdx:int }, ... ], synced:bool }
+ *   { trackType:'video'|'audio', trackIdx:int }            (single, back-compat)
  */
 function removeGaps(jsonStr) {
     var warnings = [];
@@ -826,13 +1061,8 @@ function removeGaps(jsonStr) {
         var seq = app.project.activeSequence;
         if (!seq) return JSON.stringify({ error: 'Aucune sequence active.' });
 
-        // ----- One undo group for the WHOLE multi-track operation -----
-        try { app.project.openUndoGroup && app.project.openUndoGroup('Supprimer les trous'); } catch (e) {}
-
-        var totalShifted = 0;
-        var totalGapClosed = 0;
-        var processed = 0;
-
+        // ----- Resolve + validate the checked tracks once, for both modes -----
+        var refs = [];
         for (var k = 0; k < list.length; k++) {
             var item = list[k];
             var trackType = (item.trackType === 'audio') ? 'audio' : 'video';
@@ -843,19 +1073,45 @@ function removeGaps(jsonStr) {
                 warnings.push('Piste ' + label + ' inexistante, ignoree.');
                 continue;
             }
+            refs.push({ track: tracks[item.trackIdx], label: label, type: trackType, idx: item.trackIdx });
+        }
+        if (refs.length === 0) {
+            return JSON.stringify({ error: 'Aucune piste valide a compacter.', warnings: warnings });
+        }
 
-            var res = _compactTrack(tracks[item.trackIdx], warnings, label);
-            totalShifted += res.shifted;
-            totalGapClosed += res.totalGapClosed;
-            processed++;
+        // Absent flag (older payloads) => synced, which is the safe default.
+        var synced = (p.synced !== false);
+        if (synced) _warnUncheckedTracks(seq, refs, warnings);
+
+        // ----- One undo group for the WHOLE multi-track operation -----
+        try { app.project.openUndoGroup && app.project.openUndoGroup('Supprimer les trous'); } catch (e) {}
+
+        var totalShifted = 0;
+        var totalGapClosed = 0;
+        var gapsClosed = 0;
+
+        if (synced) {
+            var r = _compactTracksSynced(refs, warnings);
+            totalShifted = r.shifted;
+            totalGapClosed = r.totalGapClosed;
+            gapsClosed = r.gaps;
+        } else {
+            for (var j = 0; j < refs.length; j++) {
+                var res = _compactTrack(refs[j].track, warnings, refs[j].label);
+                totalShifted += res.shifted;
+                totalGapClosed += res.totalGapClosed;
+                gapsClosed += res.shifted; // one move == one gap in that mode
+            }
         }
 
         try { app.project.closeUndoGroup && app.project.closeUndoGroup(); } catch (e) {}
 
         return JSON.stringify({
             ok: true,
-            tracks: processed,
+            synced: synced,
+            tracks: refs.length,
             shifted: totalShifted,
+            gaps: gapsClosed,
             totalGapClosed: _r(totalGapClosed),
             warnings: warnings
         });
