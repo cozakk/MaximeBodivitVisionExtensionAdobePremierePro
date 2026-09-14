@@ -4,6 +4,6 @@
   "private": true,
   "description": "Extension CEP Premiere Pro : B-Roll, compactage, batch.",
   "scripts": {
-    "test": "node test/check.mjs"
+    "test": "node test/check.mjs && node test/compact.mjs"
   }
 }

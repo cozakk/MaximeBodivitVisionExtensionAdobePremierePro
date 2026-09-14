@@ -14,3 +14,5 @@ jobs:
           node-version: '20'
       - name: Run checks
         run: node test/check.mjs
+      - name: Run compacting tests
+        run: node test/compact.mjs
