@@ -74,6 +74,79 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [x] Déplacement des items liés (audio/vidéo synchronisés)
 - [x] Compte-rendu : nb de clips déplacés + durée totale supprimée
 - [x] Compactage de plusieurs pistes en une seule action (cases à cocher + Tout/Aucune) — v1.3.0
+- [ ] **Compactage synchronisé V/A** — garder chaque audio sous sa vidéo (voir spec ci-dessous) — ⚠️ bug actuel
+
+### Spec — Compactage synchronisé (à implémenter)
+
+**Problème constaté.** `_compactTrack()` traite chaque piste cochée
+*indépendamment* : V1 se compacte de son côté, A1 du sien. Comme l'audio n'est
+présent que sous *certains* clips vidéo, les clips A1 se retrouvent tous collés
+bout à bout au début de la timeline, désynchronisés de leur vidéo. Cocher V1
+seule ne suffit pas non plus : seuls les items *liés* suivent, l'audio délié ou
+orphelin reste sur place.
+
+**Comportement voulu.** Les pistes cochées sont compactées **ensemble**, comme
+un seul bloc : seuls les trous **communs à toutes les pistes cochées** sont
+fermés, et tout ce qui se trouve après un trou est décalé du **même delta** sur
+toutes les pistes. Les positions relatives audio ↔ vidéo sont donc préservées à
+la frame près.
+
+**Algorithme (`_compactTracksSynced(tracks, warnings)`)**
+
+1. Snapshot de chaque piste cochée → liste d'intervalles `[startSec, endSec]`.
+2. **Union** de tous ces intervalles, toutes pistes confondues (fusion des
+   chevauchements et des intervalles contigus) → liste d'occupation globale.
+3. **Trous communs** = complément de cette union :
+   - trou de tête `[0, premierStart]` s'il dépasse la tolérance ;
+   - entre deux intervalles fusionnés consécutifs `[fin(i), début(i+1)]` ;
+   - la queue après le dernier clip est ignorée.
+4. Fermer le **premier** trou commun : `delta = largeur du trou`. Déplacer de
+   `-delta` **tous** les clips de **toutes** les pistes cochées dont
+   `start >= fin du trou`, traités de gauche à droite (la place devant est libre
+   par construction).
+5. **Anti-double-déplacement des items liés** : `move()` sur un clip vidéo
+   déplace déjà son audio lié. Avant chaque `move()`, re-snapshot puis chercher
+   le clip à sa position attendue `start` ; s'il n'y est plus mais qu'un clip de
+   même durée occupe `start - delta`, il a déjà été déplacé par son lié → passer
+   au suivant sans le déplacer une seconde fois.
+6. **Garde-fou** avant chaque `move()` : la zone `[start-delta, end-delta]` de la
+   piste cible doit être libre, sinon warning et ce clip est laissé en place.
+7. Re-calculer les trous communs et recommencer ; boucle bornée par
+   `(nb total de clips des pistes cochées) + 2` passes, comme `_compactTrack`.
+
+**Tolérances** — reprendre celles du code actuel : `0.001 s` pour détecter un
+trou, `0.02 s` pour vérifier qu'un `move()` a bien eu lieu.
+
+**Interface**
+
+- [ ] Case à cocher `opt-sync-gaps` dans l'onglet Compactage, **cochée par
+      défaut**, libellé « Garder la synchro audio/vidéo (compacter les pistes
+      ensemble) » + hint expliquant que seuls les trous communs sont fermés.
+- [ ] État mémorisé dans les prefs (`savePref` / `getPref`), comme `gapsChecked`.
+- [ ] Décochée → comportement historique piste par piste (`_compactTrack`) conservé.
+- [ ] Clés i18n FR/EN/ES/DE pour le libellé, le hint et le compte-rendu
+      (la parité des 4 tables est vérifiée par `test/check.mjs`).
+
+**Côté hôte**
+
+- [ ] `removeGaps()` route vers `_compactTracksSynced()` ou `_compactTrack()`
+      selon le flag `p.synced` du payload ; un seul `openUndoGroup` pour
+      l'ensemble dans les deux cas.
+- [ ] Compte-rendu : nb de trous fermés, nb de clips déplacés, durée totale
+      supprimée.
+- [ ] Le mode batch suit automatiquement (`batchOperation` relaie `params` tel quel).
+
+**Cas limites à traiter**
+
+- [ ] Pistes **non cochées** : elles ne sont pas déplacées. Journaliser un
+      avertissement si l'une d'elles contient des clips après le premier trou
+      fermé (risque de désynchro avec V2/V3).
+- [ ] **Trou de tête** : fermé lui aussi, en décalant toutes les pistes cochées
+      du même delta (absorbe l'item de backlog correspondant).
+- [ ] Une **seule piste** cochée : le résultat est identique au compactage actuel
+      (l'union se réduit à cette piste) — à vérifier en non-régression.
+- [ ] Audio **plus long** que sa vidéo (ou décalé) : géré nativement par l'union,
+      l'intervalle occupé s'étend jusqu'à la fin de l'audio.
 
 ## Onglet Batch
 
@@ -114,7 +187,7 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [ ] Compacter uniquement entre deux marqueurs ou une plage In/Out
 - [ ] Conserver un espace fixe entre clips (au lieu de coller à zéro)
 - [ ] Aperçu (dry-run) listant les trous avant suppression
-- [ ] Fermer aussi le trou de tête commun en gardant la synchro inter-pistes
+- [ ] ~~Fermer aussi le trou de tête commun en gardant la synchro inter-pistes~~ → couvert par la spec « Compactage synchronisé » ci-dessus
 - [ ] Détecter et supprimer les clips vides / silences
 
 ### Audio
