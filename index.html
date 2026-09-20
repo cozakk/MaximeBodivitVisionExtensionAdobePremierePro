@@ -17,10 +17,10 @@
       </div>
     </header>
 
-    <nav class="tabs">
-      <button class="tab active" data-tab="broll">B-Roll</button>
-      <button class="tab" data-tab="gaps" data-i18n="tab.gaps">Compactage</button>
-      <button class="tab" data-tab="batch" data-i18n="tab.batch">Batch</button>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" role="tab" aria-selected="true" aria-controls="tab-broll" data-tab="broll">B-Roll</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="tab-gaps" data-tab="gaps" data-i18n="tab.gaps">Compactage</button>
+      <button class="tab" role="tab" aria-selected="false" aria-controls="tab-batch" data-tab="batch" data-i18n="tab.batch">Batch</button>
     </nav>
 
     <section class="info-bar">
@@ -36,25 +36,27 @@
       <!-- ============================================================ -->
       <section class="tab-content" id="tab-broll">
 
-        <div class="field">
-          <label data-i18n="presets.label">Profils de réglages</label>
-          <div class="row">
-            <select id="preset-select">
-              <option value="" data-i18n="presets.none">— Profils —</option>
-            </select>
-            <button type="button" id="preset-load" class="mini" data-i18n="presets.load">Charger</button>
-            <button type="button" id="preset-delete" class="mini" data-i18n="presets.delete">Suppr.</button>
+        <details class="collapsible" id="presets-box">
+          <summary data-i18n="presets.label">Profils de réglages</summary>
+          <div class="collapsible-body">
+            <div class="row">
+              <select id="preset-select">
+                <option value="" data-i18n="presets.none">— Profils —</option>
+              </select>
+              <button type="button" id="preset-load" class="mini" data-i18n="presets.load">Charger</button>
+              <button type="button" id="preset-delete" class="mini" data-i18n="presets.delete">Suppr.</button>
+            </div>
+            <div class="row mini-row">
+              <input type="text" id="preset-name" data-i18n-ph="presets.name" placeholder="Nom du profil" />
+              <button type="button" id="preset-save" class="mini" data-i18n="presets.save">Enregistrer</button>
+            </div>
+            <div class="row mini-row">
+              <button type="button" id="settings-export" class="mini" data-i18n="presets.export">Exporter .json</button>
+              <button type="button" id="settings-import" class="mini" data-i18n="presets.import">Importer .json</button>
+            </div>
+            <input type="file" id="settings-file" accept="application/json,.json" hidden />
           </div>
-          <div class="row mini-row">
-            <input type="text" id="preset-name" data-i18n-ph="presets.name" placeholder="Nom du profil" />
-            <button type="button" id="preset-save" class="mini" data-i18n="presets.save">Enregistrer</button>
-          </div>
-          <div class="row mini-row">
-            <button type="button" id="settings-export" class="mini" data-i18n="presets.export">Exporter .json</button>
-            <button type="button" id="settings-import" class="mini" data-i18n="presets.import">Importer .json</button>
-          </div>
-          <input type="file" id="settings-file" accept="application/json,.json" hidden />
-        </div>
+        </details>
 
         <div class="field">
           <label for="duration" data-i18n="broll.duration">Duree du segment (secondes)</label>
@@ -217,7 +219,7 @@
         </select>
         <button id="theme-btn" class="icon-btn" type="button" data-i18n-title="tip.theme" title="Theme clair / sombre">&#x263d;</button>
       </div>
-      <span>v1.5.0 - Maxime Bodivit</span>
+      <span>v1.6.0 - Maxime Bodivit</span>
     </footer>
 
   </div>

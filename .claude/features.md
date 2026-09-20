@@ -19,6 +19,7 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [x] Création automatique de pistes vidéo manquantes via QE DOM (`_ensureVideoTrack`)
 - [x] Tests automatisés (syntaxe JS + cohérence i18n) + workflow CI GitHub Actions — v1.4.0
 - [x] Tests de l'algorithme de compactage sur un faux DOM Premiere (`test/compact.mjs`) — v1.5.0
+- [x] Captures d'écran + audit de mise en page hors Premiere (`screenshots/capture.mjs`) — v1.6.0
 
 ## Interface (UI)
 
@@ -43,6 +44,10 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [x] Export du journal dans un fichier texte — v1.3.4
 - [x] Traduction des messages du journal (i18n paramétrée) — v1.4.0
 - [x] Langues supplémentaires : Espagnol et Allemand (FR/EN/ES/DE) — v1.4.0
+- [x] Barre d'info traduite et rafraîchie au changement de langue — v1.6.0
+- [x] Bloc « Profils de réglages » repliable, replié par défaut, état mémorisé — v1.6.0
+- [x] Boutons du journal transformés en vraies cibles cliquables — v1.6.0
+- [x] Focus clavier visible (`:focus-visible`) + rôles ARIA sur les onglets — v1.6.0
 
 ## Onglet B-Roll
 
@@ -75,6 +80,7 @@ Convention : `[ ]` = à faire / en cours · `[x]` = fait et fonctionnel.
 - [x] Déplacement des items liés (audio/vidéo synchronisés)
 - [x] Compte-rendu : nb de clips déplacés + durée totale supprimée
 - [x] Compactage de plusieurs pistes en une seule action (cases à cocher + Tout/Aucune) — v1.3.0
+- [x] Nombre de clips par piste dans la liste, pistes vides signalées — v1.6.0
 - [x] **Compactage synchronisé V/A** — garder chaque audio sous sa vidéo (voir spec ci-dessous) — v1.5.0
 
 ### Spec — Compactage synchronisé (implémenté en v1.5.0)

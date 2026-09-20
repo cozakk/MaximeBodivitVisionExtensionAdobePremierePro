@@ -240,6 +240,45 @@ select {
   padding-right: 24px;
 }
 
+/* ---------- Collapsible block (settings profiles) ---------- */
+/* Folded by default so the action buttons stay visible in a 360x620
+   panel; the open/closed state is remembered like the other settings. */
+details.collapsible {
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  background: var(--bg-fieldset);
+}
+
+details.collapsible > summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-label);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+details.collapsible > summary::-webkit-details-marker { display: none; }
+details.collapsible > summary::before {
+  content: '';
+  border-left: 4px solid var(--text-dim);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.12s;
+}
+details.collapsible[open] > summary::before { transform: rotate(90deg); }
+details.collapsible > summary:hover { color: var(--text-strong); }
+
+.collapsible-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 10px 10px;
+}
+
 /* ---------- Presets ---------- */
 .presets {
   display: flex;
@@ -310,6 +349,15 @@ select {
 .track-checklist .check { font-size: 11px; padding: 2px 0; }
 .track-checklist .empty { color: var(--text-dim); font-size: 11px; font-style: italic; }
 
+/* Clip count shown next to each track; an empty track is dimmed. */
+.track-count {
+  margin-left: auto;
+  color: var(--text-dim);
+  font-size: 10px;
+}
+.track-checklist .check.is-empty span:not(.track-count) { color: var(--text-dim); }
+.track-checklist .check.is-empty .track-count { font-style: italic; }
+
 .mini-row { margin-top: 6px; gap: 6px; }
 
 button.mini {
@@ -378,16 +426,27 @@ button.secondary:disabled { opacity: 0.5; cursor: not-allowed; }
   letter-spacing: 0.5px;
 }
 
-.log-header-actions { display: flex; gap: 10px; }
+.log-header-actions { display: flex; gap: 2px; }
 
+/* Padded enough to be a real click target (the bare text was 11 px high). */
 .log-header button {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
   color: var(--text-dim);
   cursor: pointer;
+  font-family: inherit;
   font-size: 10px;
+  padding: 4px 8px;
+  /* The header itself is uppercase; the actions stay readable. */
+  text-transform: none;
+  letter-spacing: 0;
 }
-.log-header button:hover { color: var(--text); }
+.log-header button:hover {
+  color: var(--text-strong);
+  background: var(--bg-btn);
+  border-color: var(--border-soft);
+}
 
 #log {
   background: var(--bg-log);
@@ -436,6 +495,20 @@ footer {
   min-width: 0;
   background-position: right 4px center;
 }
+
+/* ---------- Keyboard focus ---------- */
+/* :focus-visible only fires for keyboard navigation, so mouse users see
+   no change while the panel stays usable without a mouse. */
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+summary:focus-visible,
+label.check:focus-within {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 1px;
+  border-radius: 3px;
+}
+.tab:focus-visible { outline-offset: -2px; }
 
 /* ---------- Scrollbars ---------- */
 main::-webkit-scrollbar,

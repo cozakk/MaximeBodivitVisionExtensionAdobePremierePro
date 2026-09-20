@@ -9,7 +9,7 @@ opérations de montage répétitives, directement depuis un panneau intégré :
 - **Compactage** — supprime tous les trous entre les clips d'une piste en les
   décalant vers la gauche pour qu'ils se touchent.
 
-> Version actuelle : **v1.5.0** — voir [.claude/changelog.md](.claude/changelog.md).
+> Version actuelle : **v1.6.0** — voir [.claude/changelog.md](.claude/changelog.md).
 
 ---
 
@@ -103,6 +103,10 @@ com.maximebodivit.visionext/
 ├── test/                  Contrôles automatisés (`npm test`)
 │   ├── check.mjs          Syntaxe JS + cohérence des tables i18n
 │   └── compact.mjs        Algorithme de compactage sur un faux DOM Premiere
+├── screenshots/           Captures du panneau hors Premiere (`node screenshots/capture.mjs`)
+│   ├── capture.mjs        Serveur local + Chrome headless piloté par DevTools
+│   ├── cep-stub.js        Faux pont CEP (fixtures) + audit de mise en page
+│   └── README.md          Mode d'emploi des captures
 └── .claude/
     ├── features.md        Suivi des fonctionnalités ([ ] / [x])
     └── changelog.md       Historique des versions

@@ -47,6 +47,7 @@
   const presetBtns  = document.querySelectorAll('.preset');
 
   // Settings profiles / import-export
+  const presetsBox     = document.getElementById('presets-box');
   const presetSelect   = document.getElementById('preset-select');
   const presetNameEl   = document.getElementById('preset-name');
   const presetLoadBtn  = document.getElementById('preset-load');
@@ -212,6 +213,9 @@
     fr: {
       'tab.gaps': 'Compactage',
       'seq.none': 'Aucune sequence detectee',
+      'seq.line': 'Sequence : {name} ({v}V / {a}A)',
+      'clips.count': '{n} clip(s)',
+      'track.empty': 'vide',
       'broll.duration': 'Duree du segment (secondes)',
       'broll.position': 'Position dans le clip',
       'pos.start': 'Debut du clip',
@@ -323,6 +327,9 @@
     en: {
       'tab.gaps': 'Compacting',
       'seq.none': 'No sequence detected',
+      'seq.line': 'Sequence: {name} ({v}V / {a}A)',
+      'clips.count': '{n} clip(s)',
+      'track.empty': 'empty',
       'broll.duration': 'Segment duration (seconds)',
       'broll.position': 'Position within the clip',
       'pos.start': 'Clip start',
@@ -434,6 +441,9 @@
     es: {
       'tab.gaps': 'Compactar',
       'seq.none': 'Ninguna secuencia detectada',
+      'seq.line': 'Secuencia: {name} ({v}V / {a}A)',
+      'clips.count': '{n} clip(s)',
+      'track.empty': 'vacia',
       'broll.duration': 'Duracion del segmento (segundos)',
       'broll.position': 'Posicion en el clip',
       'pos.start': 'Inicio del clip',
@@ -545,6 +555,9 @@
     de: {
       'tab.gaps': 'Verdichten',
       'seq.none': 'Keine Sequenz erkannt',
+      'seq.line': 'Sequenz: {name} ({v}V / {a}A)',
+      'clips.count': '{n} Clip(s)',
+      'track.empty': 'leer',
       'broll.duration': 'Segmentdauer (Sekunden)',
       'broll.position': 'Position im Clip',
       'pos.start': 'Clip-Anfang',
@@ -678,6 +691,9 @@
       el.placeholder = t(el.getAttribute('data-i18n-ph'));
     });
     document.documentElement.lang = LANG;
+    // Texts built in JS, not carried by a data-i18n attribute.
+    renderSeqLine();
+    if (seqInfo) buildGapsChecklist(seqInfo.videoTrackCount, seqInfo.audioTrackCount);
   }
 
   function setLang(lang) {
@@ -845,7 +861,10 @@
   tabBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       const tab = btn.getAttribute('data-tab');
-      tabBtns.forEach((b) => b.classList.toggle('active', b === btn));
+      tabBtns.forEach((b) => {
+        b.classList.toggle('active', b === btn);
+        b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
+      });
       tabPanels.forEach((p) => p.classList.toggle('hidden', p.id !== 'tab-' + tab));
       savePref('tab', tab);
       if (tab === 'batch') loadSequences();
@@ -858,6 +877,22 @@
     const m = Math.floor(sec / 60);
     const s = sec % 60;
     return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
+  // Build the info bar from the last host answer. Called again by
+  // applyI18n() so the line follows the interface language.
+  function renderSeqLine() {
+    if (!seqInfo) return;
+    let txt = t('seq.line', {
+      name: seqInfo.name, v: seqInfo.videoTrackCount, a: seqInfo.audioTrackCount,
+    });
+    if (typeof seqInfo.totalClips === 'number') {
+      txt += ' - ' + t('clips.count', { n: seqInfo.totalClips });
+    }
+    if (typeof seqInfo.durationSec === 'number') {
+      txt += ' - ' + fmtDuration(seqInfo.durationSec);
+    }
+    seqNameEl.textContent = txt;
   }
 
   // ------------------------------------------------------------------
@@ -873,6 +908,9 @@
     }
 
     if (info.error) {
+      // The host message stays as-is; drop the stale sequence so the info
+      // bar is not rebuilt from outdated counts on a language change.
+      seqInfo = null;
       seqNameEl.textContent = info.error;
       log('warn', info.error);
       return;
@@ -881,10 +919,7 @@
     const vCount = info.videoTrackCount;
     const aCount = info.audioTrackCount;
     seqInfo = info;
-    let infoTxt = 'Sequence: ' + info.name + ' (' + vCount + 'V / ' + aCount + 'A)';
-    if (typeof info.totalClips === 'number') infoTxt += ' - ' + info.totalClips + ' clips';
-    if (typeof info.durationSec === 'number') infoTxt += ' - ' + fmtDuration(info.durationSec);
-    seqNameEl.textContent = infoTxt;
+    renderSeqLine();
 
     // ----- B-Roll source dropdown : existing video tracks -----
     const prevSrc = parseInt(srcTrackEl.value, 10);
@@ -1097,7 +1132,15 @@
     const saved = getPref('gapsChecked', null); // array of keys, or null
     gapsTracksEl.innerHTML = '';
 
-    const addRow = (key, labelTxt) => {
+    // Clip counts come from the last getSequenceTrackInfo() answer, so a
+    // track can be labelled with its contents - and an empty one shows it.
+    const countOf = (type, i) => {
+      if (!seqInfo) return null;
+      const arr = (type === 'audio') ? seqInfo.audioClips : seqInfo.videoClips;
+      return (arr && typeof arr[i] === 'number') ? arr[i] : null;
+    };
+
+    const addRow = (key, labelTxt, count) => {
       const lbl = document.createElement('label');
       lbl.className = 'check';
       const cb = document.createElement('input');
@@ -1110,11 +1153,18 @@
       span.textContent = labelTxt;
       lbl.appendChild(cb);
       lbl.appendChild(span);
+      if (count !== null) {
+        const tag = document.createElement('span');
+        tag.className = 'track-count';
+        tag.textContent = count ? t('clips.count', { n: count }) : t('track.empty');
+        if (!count) lbl.classList.add('is-empty');
+        lbl.appendChild(tag);
+      }
       gapsTracksEl.appendChild(lbl);
     };
 
-    for (let i = 0; i < vCount; i++) addRow('video:' + i, 'V' + (i + 1));
-    for (let i = 0; i < aCount; i++) addRow('audio:' + i, 'A' + (i + 1));
+    for (let i = 0; i < vCount; i++) addRow('video:' + i, 'V' + (i + 1), countOf('video', i));
+    for (let i = 0; i < aCount; i++) addRow('audio:' + i, 'A' + (i + 1), countOf('audio', i));
 
     if (vCount + aCount === 0) {
       const e = document.createElement('div');
@@ -1382,6 +1432,11 @@
   if (optSyncGaps) {
     optSyncGaps.checked = getPref('syncGaps', true);
     optSyncGaps.addEventListener('change', () => savePref('syncGaps', optSyncGaps.checked));
+  }
+  // Profiles block: folded by default, state remembered between sessions.
+  if (presetsBox) {
+    presetsBox.open = getPref('presetsOpen', false);
+    presetsBox.addEventListener('toggle', () => savePref('presetsOpen', presetsBox.open));
   }
   wirePersistence();
   refreshPresetList();

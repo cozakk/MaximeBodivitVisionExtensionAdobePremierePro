@@ -6,6 +6,55 @@ Dates au format AAAA-MM-JJ.
 
 ---
 
+## [1.6.0] — 2026-09-20
+
+### Corrigé
+
+- **La barre d'info est traduite.** Elle était construite en dur
+  (`'Sequence: ' + … + ' clips'`) et restait donc en anglais approximatif en
+  ES et DE, alors que tout le reste du panneau était traduit. Elle passe
+  maintenant par `t()` (`seq.line`, `clips.count`) et **suit le changement de
+  langue à chaud**, sans attendre un rechargement des pistes.
+- **Les boutons d'action du B-Roll ne sont plus hors écran.** À la taille par
+  défaut du panneau (360×620, cf. `<Geometry>` du manifest), « Prévisualiser »
+  et « Générer les extraits » tombaient sous la ligne de flottaison : il
+  fallait faire défiler pour lancer une génération. Le bloc « Profils de
+  réglages », qui occupait le haut de l'onglet, est désormais replié par
+  défaut, ce qui ramène les boutons dans l'écran.
+- **Les boutons du journal sont de vraies cibles.** Exporter / Diagnostic /
+  Effacer faisaient 11 px de haut (texte nu, sans marge) ; ils ont maintenant
+  un rembourrage et un fond au survol.
+- Une erreur hôte (« Aucune séquence active ») remet à zéro la séquence
+  mémorisée, pour ne plus reconstruire la barre d'info à partir de comptes
+  périmés.
+
+### Ajouté
+
+- **Bloc « Profils de réglages » repliable**, fermé par défaut, état mémorisé
+  entre les sessions (pref `presetsOpen`).
+- **Nombre de clips par piste** dans la liste du Compactage (« V1 — 12 clip(s) »),
+  et les **pistes vides** sont signalées en grisé italique : on voit d'un coup
+  d'œil ce qu'on coche.
+- **Focus clavier visible** (`:focus-visible`) sur les boutons, listes, champs
+  et onglets — sans rien changer à la navigation à la souris.
+- Rôles `tablist` / `tab` et `aria-selected` tenus à jour sur les onglets.
+- **Captures d'écran automatisées** (`node screenshots/capture.mjs`) : le
+  panneau est servi hors Premiere avec un faux pont CEP, rendu dans Chrome
+  piloté par le protocole DevTools, puis photographié en 16 vues (3 onglets ×
+  2 thèmes, tailles par défaut / minimale / large, 4 langues, cas sans
+  séquence). Chaque exécution produit un dossier horodaté et un rapport qui
+  mesure la position réelle des éléments (ordre des blocs, débordements,
+  chevauchements, contrôles hors écran). Voir
+  [screenshots/README.md](../screenshots/README.md).
+
+### Modifié / Interne
+
+- Nouvelles clés i18n `seq.line`, `clips.count`, `track.empty` dans les quatre
+  langues (112 clés × 4).
+- Version affichée : `v1.5.0` → `v1.6.0`.
+
+---
+
 ## [1.5.0] — 2026-09-14
 
 ### Corrigé

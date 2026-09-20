@@ -1,0 +1,8 @@
+# Captures d'ecran : l'outillage est versionne (screenshots/capture.mjs,
+# cep-stub.js, README.md), pas les dossiers horodates qu'il produit.
+screenshots/[0-9]*/
+
+# Divers
+.DS_Store
+Thumbs.db
+node_modules/
